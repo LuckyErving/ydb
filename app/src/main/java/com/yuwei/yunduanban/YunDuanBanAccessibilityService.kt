@@ -1,0 +1,465 @@
+package com.yuwei.yunduanban
+
+import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.graphics.Path
+import android.graphics.Rect
+import android.os.Build
+import android.util.Log
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
+import kotlinx.coroutines.*
+
+class YunDuanBanAccessibilityService : AccessibilityService() {
+    
+    private var isRunning = false
+    private var selectedPolice = ""
+    private val automationScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    
+    companion object {
+        const val TAG = "YunDuanBanService"
+        const val ACTION_START_AUTOMATION = "com.yuwei.yunduanban.START_AUTOMATION"
+        const val EXTRA_POLICE_NAME = "police_name"
+        
+        var instance: YunDuanBanAccessibilityService? = null
+            private set
+    }
+    
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        Log.d(TAG, "云端办无障碍服务已创建")
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        instance = null
+        automationScope.cancel()
+        Log.d(TAG, "云端办无障碍服务已销毁")
+    }
+    
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // 监听界面变化，用于自动化流程
+    }
+    
+    override fun onInterrupt() {
+        Log.d(TAG, "无障碍服务被中断")
+        isRunning = false
+    }
+    
+    fun isTaskRunning(): Boolean = isRunning
+    
+    fun startAutomationTask(policeName: String) {
+        if (isRunning) {
+            Log.w(TAG, "任务已在运行中")
+            return
+        }
+        
+        selectedPolice = policeName
+        isRunning = true
+        
+        automationScope.launch {
+            try {
+                Log.d(TAG, "开始执行自动化任务，民警: $policeName")
+                runAutomation()
+            } catch (e: Exception) {
+                Log.e(TAG, "自动化任务执行失败", e)
+            } finally {
+                isRunning = false
+                Log.d(TAG, "自动化任务结束")
+            }
+        }
+    }
+    
+    private suspend fun runAutomation() = withContext(Dispatchers.Main) {
+        // 请求截屏权限（需要MediaProjection API）
+        delay(1000)
+        
+        // 1. 打开政务微信
+        launchApp("com.tencent.wework")
+        delay(1000)
+        
+        // 主循环，最多150次
+        for (i in 0 until 150) {
+            delay(150)
+            
+            // 检查是否有违法车辆信息
+            val weifacheliang = performOCR(150, 1888, 333, 116)
+            if (weifacheliang.isNullOrEmpty() || weifacheliang == "开始") {
+                Log.d(TAG, "未检测到违法车辆信息，结束循环")
+                break
+            }
+            
+            Log.d(TAG, "检测到违法车辆: $weifacheliang")
+            
+            // 2. 复制违法时间
+            delay(150)
+            performLongClick(332, 1950, 700)
+            delay(600)
+            performClick(540, 800)
+            delay(500)
+            
+            // 3. 点击保存图片到相册
+            performClick(384, 1721)
+            delay(1900)
+            performLongClick(500, 1200, 800)
+            delay(100)
+            performClick(500, 1230)
+            delay(200)
+            
+            // 4. 返回并切换到执法处理app
+            performBack()
+            delay(800)
+            openRecentApps()
+            delay(800)
+            
+            if (i == 0) {
+                performClick(80, 1200)
+            } else {
+                performClick(540, 1170)
+            }
+            delay(600)
+            
+            // 5. 检查是否在云端办界面
+            val yunduanban = performOCR(450, 128, 165, 75)
+            if (yunduanban != "云端办") {
+                Log.d(TAG, "未在云端办界面，退出")
+                break
+            }
+            
+            // 6. 粘贴号牌搜索
+            performClick(740, 355)
+            delay(100)
+            performClick(890, 348)
+            delay(100)
+            performLongClick(740, 355, 800)
+            delay(300)
+            performClick(261, 238)
+            delay(100)
+            performClick(995, 352) // 点击搜索
+            delay(3000)
+            
+            // 7. 处理各种错误提示
+            handleErrorDialogs()
+            
+            // 8. 检查是否未查询到数据
+            if (findTextNode("未查询到数据") != null) {
+                performClick(540, 1298)
+                delay(400)
+                deleteWeixinMessages()
+                continue
+            }
+            
+            // 9. 点击开单按钮
+            delay(700)
+            val btnKd = findNodeById("btnKd")
+            btnKd?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            delay(300)
+            
+            // 10. 选择简易A版
+            clickText("简易A版")
+            delay(800)
+            
+            performClick(530, 1320)
+            delay(300)
+            
+            if (findTextNode("请稍后") != null || 
+                findTextNode("未查询到当事人1年内的现场教育纠正记录！") != null) {
+                performClick(530, 1320)
+                delay(300)
+            }
+            
+            // 11. 选择违法信息
+            performClick(810, 303)
+            delay(500)
+            performClick(975, 1228)
+            delay(200)
+            
+            // 12. 输入民警信息
+            inputText(selectedPolice)
+            delay(200)
+            performClick(980, 336) // 搜索
+            delay(500)
+            performClick(540, 490)
+            delay(500)
+            
+            // 13. 打印预览
+            performClick(540, 2152)
+            delay(500)
+            
+            // 14. 上传图片
+            performClick(540, 1298)
+            delay(500)
+            performClick(194, 1521)
+            delay(200)
+            clickText("相册")
+            delay(1500)
+            performClick(260, 595)
+            delay(100)
+            performClick(990, 165)
+            delay(400)
+            performClick(540, 2152)
+            delay(2000)
+            
+            // 15. 处理各种特殊情况
+            handleSpecialCases(weifacheliang)
+            
+            // 16. 检查是否达到上限
+            if (findTextNode("民警当日开具的简易程序已达") != null) {
+                Log.d(TAG, "已达到开单上限")
+                break
+            }
+            
+            // 17. 最终打印
+            performClick(540, 2158)
+            val dangchangchufayulan = performOCR(324, 128, 502, 73)
+            if (dangchangchufayulan != "当场处罚打印预览") {
+                Log.d(TAG, "打印预览界面异常")
+                break
+            }
+            delay(800)
+            
+            performClick(308, 1298) // 是
+            delay(1000)
+            clickText("确定")
+            delay(1000)
+            
+            // 18. 删除微信消息并添加车牌到结果
+            deleteWeixinMessages(weifacheliang)
+        }
+        
+        Log.d(TAG, "自动化流程完成")
+    }
+    
+    private suspend fun handleErrorDialogs() {
+        // 处理"interrupted"错误
+        while (findTextNode("interrupted") != null) {
+            performClick(540, 1298)
+            delay(100)
+            performClick(995, 352)
+            delay(2500)
+        }
+        
+        // 处理"请稍后"提示
+        while (findTextNode("请稍后") != null) {
+            performClick(560, 1280)
+            delay(100)
+            performClick(995, 352)
+            delay(2500)
+        }
+        
+        // 处理"unexpected end of"错误
+        while (findTextNode("unexpected end of") != null) {
+            performClick(530, 1360)
+            delay(100)
+            performClick(995, 352)
+            delay(2500)
+        }
+    }
+    
+    private suspend fun handleSpecialCases(weifacheliang: String) {
+        // 处理"继续开单"情况
+        if (findTextNode("继续开单") != null) {
+            performClick(773, 1545) // 否
+            delay(800)
+            performClick(773, 1400) // 否
+            delay(600)
+            performBack()
+            delay(800)
+            performClick(308, 1298) // 是
+            delay(800)
+            deleteWeixinMessages(weifacheliang)
+            return
+        }
+        
+        // 处理"教育纠正"情况
+        if (findTextNode("该违法符合教育纠正条件") != null) {
+            if (findTextNode("民警当日开具的简易程序已达") != null) {
+                return
+            }
+            performClick(773, 1478) // 否
+            delay(700)
+            performClick(540, 2158) // 打印
+            
+            val dangchangchufayulann = performOCR(324, 128, 502, 73)
+            if (dangchangchufayulann != "当场处罚打印预览") {
+                return
+            }
+            delay(800)
+            performClick(308, 1298) // 是
+            delay(1000)
+            clickText("确定")
+            delay(800)
+            deleteWeixinMessages(weifacheliang)
+            return
+        }
+        
+        // 处理"首违警告"情况
+        if (findTextNode("违法符合首违警告情形") != null) {
+            performClick(773, 1370)
+            delay(600)
+            clickText("警告")
+            delay(900)
+            performClick(540, 2152) // 打印预览
+            delay(2000)
+        }
+        
+        // 处理"请稍后"循环
+        while (findTextNode("请稍后") != null) {
+            performClick(550, 1300)
+            delay(200)
+            
+            while (findTextNode("已取消业务数据校验") != null) {
+                performClick(290, 1300) // 是
+                delay(800)
+                performClick(540, 2152)
+                delay(2000)
+            }
+        }
+        
+        // 处理"骑手性质"选择
+        if (findTextNode("请选择骑手性质") != null) {
+            performClick(540, 1298)
+            delay(600)
+            performClick(810, 1860)
+            delay(600)
+            clickText("众包")
+            delay(800)
+            performClick(540, 2158)
+            delay(600)
+        }
+    }
+    
+    private suspend fun deleteWeixinMessages(weifacheliang: String? = null) {
+        launchApp("com.tencent.wework")
+        delay(500)
+        performLongClick(330, 1950, 800)
+        delay(200)
+        performClick(540, 1371) // 多选
+        delay(200)
+        performClick(488, 1722)
+        delay(200)
+        performClick(945, 2145)
+        delay(600)
+        performClick(834, 1251)
+        delay(300)
+        
+        weifacheliang?.let {
+            AutomationDataManager.addResult(it)
+        }
+    }
+    
+    // ============= 辅助方法 =============
+    
+    private fun launchApp(packageName: String) {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        intent?.let {
+            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(it)
+        }
+    }
+    
+    private suspend fun performClick(x: Int, y: Int) {
+        val path = Path().apply {
+            moveTo(x.toFloat(), y.toFloat())
+        }
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
+            .build()
+        
+        withContext(Dispatchers.Main) {
+            dispatchGesture(gesture, null, null)
+        }
+    }
+    
+    private suspend fun performLongClick(x: Int, y: Int, duration: Long) {
+        val path = Path().apply {
+            moveTo(x.toFloat(), y.toFloat())
+        }
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
+            .build()
+        
+        withContext(Dispatchers.Main) {
+            dispatchGesture(gesture, null, null)
+        }
+    }
+    
+    private fun performBack() {
+        performGlobalAction(GLOBAL_ACTION_BACK)
+    }
+    
+    private fun openRecentApps() {
+        performGlobalAction(GLOBAL_ACTION_RECENTS)
+    }
+    
+    private fun findTextNode(text: String): AccessibilityNodeInfo? {
+        val root = rootInActiveWindow ?: return null
+        return findNodeByText(root, text)
+    }
+    
+    private fun findNodeByText(node: AccessibilityNodeInfo, text: String): AccessibilityNodeInfo? {
+        if (node.text?.contains(text) == true) {
+            return node
+        }
+        
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val result = findNodeByText(child, text)
+            if (result != null) return result
+        }
+        
+        return null
+    }
+    
+    private fun findNodeById(id: String): AccessibilityNodeInfo? {
+        val root = rootInActiveWindow ?: return null
+        val nodes = root.findAccessibilityNodeInfosByViewId(id)
+        return nodes.firstOrNull()
+    }
+    
+    private fun clickText(text: String) {
+        val node = findTextNode(text)
+        node?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+    }
+    
+    private fun inputText(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("input", text)
+        clipboard.setPrimaryClip(clip)
+        
+        // 找到输入框并粘贴
+        val root = rootInActiveWindow
+        root?.let {
+            val editText = findEditText(it)
+            editText?.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            editText?.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+        }
+    }
+    
+    private fun findEditText(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.className == "android.widget.EditText") {
+            return node
+        }
+        
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val result = findEditText(child)
+            if (result != null) return result
+        }
+        
+        return null
+    }
+    
+    private fun performOCR(x: Int, y: Int, w: Int, h: Int): String? {
+        // 这里需要使用MediaProjection API来截屏，然后使用Google ML Kit进行OCR
+        // 由于需要截屏权限和复杂的实现，这里返回模拟结果
+        // 实际项目中需要完整实现
+        Log.d(TAG, "执行OCR识别: ($x, $y, $w, $h)")
+        return null
+    }
+}

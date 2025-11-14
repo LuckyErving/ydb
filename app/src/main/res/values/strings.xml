@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">云端办小助手</string>
+    <string name="accessibility_service_description">云端办自动化服务，用于执行政务微信和黄盾执法处理的自动化流程</string>
+    <string name="accessibility_service_label">云端办自动化服务</string>
+    
+    <!-- 权限相关 -->
+    <string name="permission_accessibility_title">需要无障碍服务权限</string>
+    <string name="permission_accessibility_message">请前往设置开启无障碍服务以使用自动化功能</string>
+    <string name="permission_overlay_title">需要悬浮窗权限</string>
+    <string name="permission_overlay_message">请授予悬浮窗权限以显示状态提示</string>
+    
+    <!-- 按钮文本 -->
+    <string name="start_button">开始运行</string>
+    <string name="export_button">导出车牌</string>
+    
+    <!-- 状态文本 -->
+    <string name="status_ready">就绪，等待开始...</string>
+    <string name="status_starting">正在启动自动化任务...</string>
+    <string name="status_running">任务执行中...</string>
+    <string name="status_completed">任务完成，可重新开始</string>
+    <string name="status_error">执行出错，请检查</string>
+    
+    <!-- 提示信息 -->
+    <string name="toast_no_export_data">没有可导出的结果</string>
+    <string name="toast_copied">结果已复制到剪贴板</string>
+    <string name="dialog_export_title">导出结果预览</string>
+    <string name="dialog_positive">确定</string>
+    <string name="dialog_neutral">复制</string>
+    <string name="dialog_negative">取消</string>
+    
+    <!-- 民警列表 -->
+    <string-array name="police_names">
+        <item>赵炜彦</item>
+        <item>陈立晟</item>
+        <item>钟少文</item>
+        <item>朱斌</item>
+        <item>黄纬绵</item>
+        <item>罗海威</item>
+        <item>李谋挺</item>
+    </string-array>
+</resources>

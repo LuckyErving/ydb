@@ -1,0 +1,2 @@
+rootProject.name = "云端办小助手"
+include ':app'

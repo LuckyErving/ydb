@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. -->
+    <style name="Base.Theme.YunDuanBan" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">#3498db</item>
+        <item name="colorPrimaryVariant">#2980b9</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#2ecc71</item>
+        <item name="colorSecondaryVariant">#27ae60</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.YunDuanBan" parent="Base.Theme.YunDuanBan" />
+</resources>

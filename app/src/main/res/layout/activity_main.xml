@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center_horizontal">
+
+        <!-- 标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="云端办小助手"
+            android:textSize="24sp"
+            android:textColor="#2C3E50"
+            android:textStyle="bold"
+            android:layout_marginBottom="14dp"
+            android:gravity="center" />
+
+        <!-- 民警选择 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="民警二："
+                android:textSize="16sp"
+                android:textColor="#2C3E50" />
+
+            <Spinner
+                android:id="@+id/spinnerPolice"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/spinner_background" />
+        </LinearLayout>
+
+        <!-- 开始运行按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStart"
+            android:layout_width="200dp"
+            android:layout_height="60dp"
+            android:text="开始运行"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#3498db"
+            app:cornerRadius="8dp"
+            android:layout_margin="16dp" />
+
+        <!-- 导出车牌按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExport"
+            android:layout_width="200dp"
+            android:layout_height="60dp"
+            android:text="导出车牌"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#2ecc71"
+            app:cornerRadius="8dp"
+            android:layout_margin="16dp" />
+
+        <!-- 使用说明 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/instruction_background"
+            android:padding="16dp"
+            android:layout_margin="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="使用说明："
+                android:textSize="16sp"
+                android:textColor="#2C3E50"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1. 先登录[黄盾]，后进入[执法处理]模块，点击[云端办]"
+                android:textSize="14sp"
+                android:textColor="#34495e"
+                android:lineSpacingExtra="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2. 打开[政务微信]，找到从网页端转发过来的信息"
+                android:textSize="14sp"
+                android:textColor="#34495e"
+                android:lineSpacingExtra="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3. 前往[设置-无障碍]开启无障碍服务"
+                android:textSize="14sp"
+                android:textColor="#34495e"
+                android:lineSpacingExtra="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="4. 点击[开始运行]按钮启动程序"
+                android:textSize="14sp"
+                android:textColor="#34495e"
+                android:lineSpacingExtra="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="5. 完成后点击[导出车牌]复制已开单数据，发往政务微信做最后一步流程"
+                android:textSize="14sp"
+                android:textColor="#34495e"
+                android:lineSpacingExtra="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="6. 按音量上键可提前终止运行"
+                android:textSize="14sp"
+                android:textColor="#34495e"
+                android:lineSpacingExtra="4dp" />
+        </LinearLayout>
+
+        <!-- 状态显示 -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="就绪，等待开始..."
+            android:textSize="16sp"
+            android:textColor="#7f8c8d"
+            android:gravity="center"
+            android:layout_margin="30dp" />
+
+        <!-- 版权信息 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="30dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="新质战斗力未来中心 ©2025"
+                android:textSize="12sp"
+                android:textColor="#95a5a6" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
