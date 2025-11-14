@@ -1,3 +1,235 @@
-你是安卓开发工程师，请你帮我开发一个安卓APP，我现在的目录下有一个名为“云端办小助手5fx版.js“的文件，这个文件是我基于autojs编写的自动化脚本，且里面包含界面设计，请你参考该界面设计；点击按钮”开始运行“后会自动运行流程任务（先开启无障碍服务），比如打开政务微信复制信息，点击某个位置坐标，到某个app查询这些信息等等，具体自动化流程请你参考脚本内容实现。
-该APP要能够支持安卓10及以上版本。项目目录下还有部分关于wrapper的配置文件，有用你就用。
-请帮我使用github actions来实现CI/CD(".github/workflows/android-ci.yml"是我之前的安卓项目使用的，请你参考这个)，要求每次推送版本代码后自动进行构建和测试，最后生成一个release版本的APK文件（含版本号）并上传到GitHub的Release页面。
+# Android项目开发提示词模板
+
+你是一名经验丰富的Android开发工程师，请帮我从零开始创建一个完整的Android应用项目。
+
+## 项目需求
+
+### 1. 基础信息
+- **目标平台**: Android 10 (API 29) 及以上版本
+- **开发语言**: Kotlin
+- **构建工具**: Gradle 8.2+
+- **UI框架**: Material Design 3
+
+### 2. 功能需求
+[描述你的具体功能需求，例如：]
+- 我有一个基于AutoJS编写的自动化脚本（文件名："云端办小助手5fx版.js"）
+- 请参考脚本中的界面设计实现原生Android UI
+- 实现无障碍服务来执行自动化流程
+- 功能包括：打开特定应用、复制信息、模拟点击、查询数据等
+
+### 3. 项目结构要求
+
+**必须完成以下配置（避免常见错误）：**
+
+#### 3.1 Gradle配置
+- ✅ 在`settings.gradle`中配置`pluginManagement`和`dependencyResolutionManagement`
+- ✅ 添加Google和Maven Central仓库
+- ✅ 确保`build.gradle`中plugin版本与gradle版本兼容
+- ✅ 创建完整的gradle wrapper（包括gradle-wrapper.jar文件）
+
+```groovy
+// settings.gradle 必需配置
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+```
+
+#### 3.2 资源文件
+- ✅ 创建所有密度的应用图标（mipmap-mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi）
+- ✅ 支持自适应图标（mipmap-anydpi-v26）
+- ✅ 提供ic_launcher和ic_launcher_round
+- ✅ 使用矢量图形（XML格式）而非PNG
+
+#### 3.3 签名配置
+- ✅ 在`app/build.gradle`中配置`signingConfigs`
+- ✅ 为debug和release都配置签名
+- ✅ 使用相对路径引用keystore文件
+
+```groovy
+// app/build.gradle 签名配置示例
+signingConfigs {
+    debug {
+        storeFile file("../keystore/debug.keystore")
+        storePassword "android"
+        keyAlias "androiddebugkey"
+        keyPassword "android"
+    }
+    release {
+        storeFile file("../keystore/debug.keystore")
+        storePassword "android"
+        keyAlias "androiddebugkey"
+        keyPassword "android"
+    }
+}
+buildTypes {
+    debug {
+        signingConfig signingConfigs.debug
+    }
+    release {
+        signingConfig signingConfigs.release
+    }
+}
+```
+
+### 4. GitHub Actions CI/CD配置
+
+#### 4.1 核心要求
+- ✅ 每次推送到main/master分支时自动构建
+- ✅ 推送版本标签（如v1.0.0）时创建GitHub Release
+- ✅ 自动生成签名的APK文件
+- ✅ APK文件名包含版本号
+
+#### 4.2 必须包含的步骤
+
+```yaml
+# .github/workflows/android-ci.yml
+- name: Set up JDK 17
+  uses: actions/setup-java@v4
+  with:
+    java-version: '17'
+    distribution: 'temurin'
+
+- name: Setup Gradle
+  uses: gradle/actions/setup-gradle@v3
+  with:
+    gradle-version: '8.2'
+    cache-read-only: false
+
+- name: Grant execute permission for gradlew
+  run: chmod +x gradlew
+
+- name: Generate Debug Keystore
+  run: |
+    mkdir -p keystore
+    keytool -genkeypair -v -keystore keystore/debug.keystore \
+      -alias androiddebugkey -keyalg RSA -keysize 2048 \
+      -validity 10000 -storepass android -keypass android \
+      -dname "CN=Android Debug,O=Android,C=US"
+
+- name: Build Release APK
+  run: ./gradlew assembleRelease --parallel --build-cache
+```
+
+#### 4.3 缓存策略
+- ✅ 使用`gradle/actions/setup-gradle`内置缓存
+- ✅ 指定gradle版本与wrapper一致
+- ✅ 不要使用已废弃的配置选项（如gradle-home-cache-cleanup）
+
+### 5. 文件清单
+
+请确保创建以下所有必需文件：
+
+```
+项目根目录/
+├── .github/
+│   └── workflows/
+│       └── android-ci.yml          # CI/CD配置
+├── app/
+│   ├── build.gradle                # 应用级构建配置
+│   ├── proguard-rules.pro          # 混淆规则
+│   └── src/main/
+│       ├── AndroidManifest.xml     # 应用清单
+│       ├── java/                   # Kotlin源代码
+│       └── res/
+│           ├── drawable/           # 矢量图形资源
+│           ├── layout/             # 布局文件
+│           ├── mipmap-*/           # 所有密度的图标
+│           ├── mipmap-anydpi-v26/  # 自适应图标
+│           ├── values/             # 字符串、颜色、主题
+│           └── xml/                # XML配置（如无障碍服务）
+├── gradle/
+│   └── wrapper/
+│       ├── gradle-wrapper.jar      # ⚠️ 必需！不能遗漏
+│       └── gradle-wrapper.properties
+├── keystore/
+│   └── README.md                   # keystore说明文档
+├── build.gradle                    # 项目级构建配置
+├── settings.gradle                 # ⚠️ 必需配置仓库
+├── gradle.properties
+├── gradlew                         # Unix可执行脚本
+├── gradlew.bat                     # Windows批处理脚本
+├── .gitignore
+└── README.md
+
+⚠️ 关键注意事项：
+1. gradle-wrapper.jar 文件必须提交到Git（不能被.gitignore）
+2. 所有密度的图标文件都必须创建
+3. settings.gradle 必须配置pluginManagement
+4. 签名配置必须在构建前完成
+```
+
+### 6. 避免的常见错误
+
+❌ **不要做：**
+1. 忘记提交gradle-wrapper.jar文件
+2. 在build.gradle中配置仓库而不是settings.gradle
+3. 使用已废弃的Gradle API（如configuration-cache、gradle-home-cache-cleanup）
+4. 创建未签名的APK
+5. 只创建部分密度的图标
+6. 使用PNG图标而不是矢量图标
+
+✅ **一定要做：**
+1. 完整的gradle wrapper配置
+2. 在settings.gradle中配置pluginManagement
+3. 为所有构建类型配置签名
+4. 创建完整的图标资源集
+5. 在GitHub Actions中自动生成keystore
+6. 使用gradle/actions/setup-gradle内置缓存
+
+### 7. 版本发布流程
+
+```bash
+# 1. 更新版本号（app/build.gradle）
+versionCode 1
+versionName "1.0.0"
+
+# 2. 提交代码
+git add .
+git commit -m "release: v1.0.0"
+git push
+
+# 3. 创建标签触发自动发布
+git tag v1.0.0
+git push origin v1.0.0
+
+# GitHub Actions会自动：
+# - 构建签名的APK
+# - 创建GitHub Release
+# - 上传APK到Release页面
+```
+
+### 8. 验证清单
+
+在开始构建前，请确认：
+- [ ] settings.gradle已配置pluginManagement
+- [ ] gradle-wrapper.jar文件已创建并提交
+- [ ] 所有密度的图标已创建（至少5个密度 + anydpi-v26）
+- [ ] 签名配置已添加到app/build.gradle
+- [ ] GitHub Actions包含生成keystore步骤
+- [ ] .gitignore正确配置（不排除wrapper jar）
+- [ ] README.md包含使用说明
+
+---
+
+## 特殊需求（可选）
+
+如果项目有特殊需求，请在此说明：
+- 需要的第三方库（如OCR、网络请求等）
+- 特定的权限需求（无障碍、悬浮窗等）
+- 数据存储方案
+- 后台服务需求
+
+---
+
+**开始创建项目，按照上述清单逐步完成，确保不遗漏任何关键配置。**
