@@ -2,7 +2,7 @@ name: Android CI/CD
 
 on:
   push:
-    branches: [ main, master ]
+    # branches: [ main, master ]
     tags:
       - 'v*'
   pull_request:
@@ -21,29 +21,18 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: 'gradle'
     
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
+        gradle-version: '8.2'
         cache-read-only: false
-        gradle-home-cache-cleanup: true
     
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     
-    - name: Cache Gradle wrapper
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/wrapper
-          ~/.gradle/caches
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-    
     - name: Build with Gradle
-      run: ./gradlew build --parallel --build-cache --configuration-cache
+      run: ./gradlew build --parallel --build-cache
       
     - name: Run tests
       run: ./gradlew test --parallel --build-cache
@@ -75,29 +64,18 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: 'gradle'
     
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
+        gradle-version: '8.2'
         cache-read-only: false
-        gradle-home-cache-cleanup: true
-    
-    - name: Cache Gradle wrapper
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/wrapper
-          ~/.gradle/caches
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
     
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
     - name: Build Release APK
-      run: ./gradlew assembleRelease --parallel --build-cache --configuration-cache
+      run: ./gradlew assembleRelease --parallel --build-cache
       
     - name: Get version from tag
       id: get_version
