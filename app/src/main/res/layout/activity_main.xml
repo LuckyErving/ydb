@@ -49,6 +49,19 @@
                 android:background="@drawable/spinner_background" />
         </LinearLayout>
 
+        <!-- 服务状态提示 -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✅ 无障碍服务已开启"
+            android:textSize="14sp"
+            android:textColor="@android:color/holo_green_dark"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:padding="8dp"
+            android:gravity="center" />
+
         <!-- 开始运行按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStart"
@@ -162,18 +175,16 @@
                 android:textSize="14sp"
                 android:textColor="#34495e"
                 android:lineSpacingExtra="4dp" />
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚠️ 注意：APP被强制关闭后，无障碍服务会自动关闭（系统安全机制），请重新开启"
+                android:textSize="12sp"
+                android:textColor="#e74c3c"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
-
-        <!-- 状态显示 -->
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="就绪，等待开始..."
-            android:textSize="16sp"
-            android:textColor="#7f8c8d"
-            android:gravity="center"
-            android:layout_margin="30dp" />
 
         <!-- 版权信息 -->
         <LinearLayout

@@ -36,9 +36,29 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
+        // 初始化LogManager
+        LogManager.init(applicationContext)
+        
         setupUI()
         setupListeners()
         loadLastSelection()
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // 每次回到前台时检查无障碍服务状态
+        checkAccessibilityServiceStatus()
+    }
+    
+    private fun checkAccessibilityServiceStatus() {
+        if (!isAccessibilityServiceEnabled()) {
+            // 如果无障碍服务被关闭，显示提示
+            binding.tvStatus.text = "⚠️ 无障碍服务已关闭，请重新开启"
+            binding.tvStatus.setTextColor(getColor(android.R.color.holo_orange_dark))
+        } else {
+            binding.tvStatus.text = "✅ 无障碍服务已开启"
+            binding.tvStatus.setTextColor(getColor(android.R.color.holo_green_dark))
+        }
     }
     
     private fun setupUI() {
