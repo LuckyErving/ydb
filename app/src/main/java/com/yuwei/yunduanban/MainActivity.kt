@@ -25,6 +25,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var selectedPolice: String = "赵炜彦"
     
+    companion object {
+        private const val PREFS_NAME = "YunDuanBanPrefs"
+        private const val KEY_SELECTED_POLICE = "selected_police"
+        private const val KEY_SELECTED_POLICE_POSITION = "selected_police_position"
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -32,6 +38,7 @@ class MainActivity : AppCompatActivity() {
         
         setupUI()
         setupListeners()
+        loadLastSelection()
     }
     
     private fun setupUI() {
@@ -44,9 +51,28 @@ class MainActivity : AppCompatActivity() {
         binding.spinnerPolice.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 selectedPolice = policeNames[position]
+                saveSelection(position, selectedPolice)
             }
             
             override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+    
+    private fun loadLastSelection() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val lastPosition = prefs.getInt(KEY_SELECTED_POLICE_POSITION, 0)
+        val lastName = prefs.getString(KEY_SELECTED_POLICE, "赵炜彦") ?: "赵炜彦"
+        
+        binding.spinnerPolice.setSelection(lastPosition)
+        selectedPolice = lastName
+    }
+    
+    private fun saveSelection(position: Int, name: String) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putInt(KEY_SELECTED_POLICE_POSITION, position)
+            putString(KEY_SELECTED_POLICE, name)
+            apply()
         }
     }
     
@@ -65,6 +91,36 @@ class MainActivity : AppCompatActivity() {
         binding.btnExport.setOnClickListener {
             exportResults()
         }
+        
+        // 查看日志按钮
+        binding.btnViewLog.setOnClickListener {
+            showLogDialog()
+        }
+    }
+    
+    private fun showLogDialog() {
+        val logs = LogManager.getLogsAsText()
+        val logText = if (logs.isEmpty()) {
+            "暂无日志记录"
+        } else {
+            logs
+        }
+        
+        MaterialAlertDialogBuilder(this)
+            .setTitle("自动化运行日志")
+            .setMessage(logText)
+            .setPositiveButton("确定", null)
+            .setNeutralButton("清空日志") { _, _ ->
+                LogManager.clearLogs()
+                Toast.makeText(this, "日志已清空", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("复制日志") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("运行日志", logText)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "日志已复制到剪贴板", Toast.LENGTH_SHORT).show()
+            }
+            .show()
     }
     
     private fun isAccessibilityServiceEnabled(): Boolean {
@@ -105,6 +161,9 @@ class MainActivity : AppCompatActivity() {
             try {
                 // 清空之前的结果
                 AutomationDataManager.clearResults()
+                LogManager.clearLogs()
+                
+                LogManager.info("开始自动化任务，民警：$selectedPolice")
                 
                 // 通过Intent启动无障碍服务的自动化流程
                 val intent = Intent(this@MainActivity, YunDuanBanAccessibilityService::class.java)
@@ -118,6 +177,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this@MainActivity, "自动化任务已启动", Toast.LENGTH_SHORT).show()
                 
             } catch (e: Exception) {
+                LogManager.error("启动失败: ${e.message}")
                 withContext(Dispatchers.Main) {
                     binding.tvStatus.text = "${getString(R.string.status_error)}: ${e.message}"
                     Toast.makeText(this@MainActivity, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()

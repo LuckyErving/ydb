@@ -65,12 +65,15 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         automationScope.launch {
             try {
                 Log.d(TAG, "开始执行自动化任务，民警: $policeName")
+                LogManager.info("开始执行自动化任务，民警: $policeName")
                 runAutomation()
             } catch (e: Exception) {
                 Log.e(TAG, "自动化任务执行失败", e)
+                LogManager.error("自动化任务执行失败: ${e.message}")
             } finally {
                 isRunning = false
                 Log.d(TAG, "自动化任务结束")
+                LogManager.info("自动化任务结束")
             }
         }
     }
@@ -80,6 +83,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         delay(1000)
         
         // 1. 打开政务微信
+        LogManager.info("正在打开政务微信...")
         launchApp("com.tencent.wework")
         delay(1000)
         
@@ -87,14 +91,18 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         for (i in 0 until 150) {
             delay(150)
             
+            LogManager.info("处理第 ${i + 1} 条记录...")
+            
             // 检查是否有违法车辆信息
             val weifacheliang = performOCR(150, 1888, 333, 116)
             if (weifacheliang.isNullOrEmpty() || weifacheliang == "开始") {
                 Log.d(TAG, "未检测到违法车辆信息，结束循环")
+                LogManager.warning("未检测到违法车辆信息，结束循环")
                 break
             }
             
             Log.d(TAG, "检测到违法车辆: $weifacheliang")
+            LogManager.info("检测到违法车辆: $weifacheliang")
             
             // 2. 复制违法时间
             delay(150)
@@ -128,8 +136,10 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             val yunduanban = performOCR(450, 128, 165, 75)
             if (yunduanban != "云端办") {
                 Log.d(TAG, "未在云端办界面，退出")
+                LogManager.error("未在云端办界面，退出流程")
                 break
             }
+            LogManager.info("已进入云端办界面")
             
             // 6. 粘贴号牌搜索
             performClick(740, 355)
@@ -148,11 +158,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             // 8. 检查是否未查询到数据
             if (findTextNode("未查询到数据") != null) {
+                LogManager.warning("未查询到数据，跳过此条")
                 performClick(540, 1298)
                 delay(400)
                 deleteWeixinMessages()
                 continue
             }
+            LogManager.info("查询到车辆数据，开始处理")
             
             // 9. 点击开单按钮
             delay(700)
@@ -211,16 +223,20 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             // 16. 检查是否达到上限
             if (findTextNode("民警当日开具的简易程序已达") != null) {
                 Log.d(TAG, "已达到开单上限")
+                LogManager.warning("已达到开单上限，停止处理")
                 break
             }
             
             // 17. 最终打印
+            LogManager.info("准备打印决定书")
             performClick(540, 2158)
             val dangchangchufayulan = performOCR(324, 128, 502, 73)
             if (dangchangchufayulan != "当场处罚打印预览") {
                 Log.d(TAG, "打印预览界面异常")
+                LogManager.error("打印预览界面异常")
                 break
             }
+            LogManager.info("进入打印预览界面")
             delay(800)
             
             performClick(308, 1298) // 是
@@ -238,6 +254,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     private suspend fun handleErrorDialogs() {
         // 处理"interrupted"错误
         while (findTextNode("interrupted") != null) {
+            LogManager.warning("检测到interrupted错误，正在处理")
             performClick(540, 1298)
             delay(100)
             performClick(995, 352)
@@ -246,6 +263,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 处理"请稍后"提示
         while (findTextNode("请稍后") != null) {
+            LogManager.warning("检测到'请稍后'提示，正在处理")
             performClick(560, 1280)
             delay(100)
             performClick(995, 352)
@@ -254,6 +272,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 处理"unexpected end of"错误
         while (findTextNode("unexpected end of") != null) {
+            LogManager.warning("检测到unexpected end of错误，正在处理")
             performClick(530, 1360)
             delay(100)
             performClick(995, 352)
@@ -264,6 +283,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     private suspend fun handleSpecialCases(weifacheliang: String) {
         // 处理"继续开单"情况
         if (findTextNode("继续开单") != null) {
+            LogManager.info("检测到'继续开单'提示，按流程处理")
             performClick(773, 1545) // 否
             delay(800)
             performClick(773, 1400) // 否
@@ -278,7 +298,9 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 处理"教育纠正"情况
         if (findTextNode("该违法符合教育纠正条件") != null) {
+            LogManager.info("检测到'教育纠正'条件")
             if (findTextNode("民警当日开具的简易程序已达") != null) {
+                LogManager.warning("已达到开单上限")
                 return
             }
             performClick(773, 1478) // 否
@@ -287,6 +309,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             val dangchangchufayulann = performOCR(324, 128, 502, 73)
             if (dangchangchufayulann != "当场处罚打印预览") {
+                LogManager.error("教育纠正打印预览界面异常")
                 return
             }
             delay(800)
@@ -300,6 +323,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 处理"首违警告"情况
         if (findTextNode("违法符合首违警告情形") != null) {
+            LogManager.info("检测到'首违警告'情形，选择警告处理")
             performClick(773, 1370)
             delay(600)
             clickText("警告")
@@ -310,10 +334,12 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 处理"请稍后"循环
         while (findTextNode("请稍后") != null) {
+            LogManager.warning("等待系统响应...")
             performClick(550, 1300)
             delay(200)
             
             while (findTextNode("已取消业务数据校验") != null) {
+                LogManager.info("取消业务数据校验")
                 performClick(290, 1300) // 是
                 delay(800)
                 performClick(540, 2152)
@@ -323,6 +349,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 处理"骑手性质"选择
         if (findTextNode("请选择骑手性质") != null) {
+            LogManager.info("选择骑手性质：众包")
             performClick(540, 1298)
             delay(600)
             performClick(810, 1860)
@@ -335,6 +362,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     private suspend fun deleteWeixinMessages(weifacheliang: String? = null) {
+        LogManager.info("清理微信消息${if (weifacheliang != null) "：$weifacheliang" else ""}")
         launchApp("com.tencent.wework")
         delay(500)
         performLongClick(330, 1950, 800)
@@ -350,6 +378,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         weifacheliang?.let {
             AutomationDataManager.addResult(it)
+            LogManager.success("已完成处理：$it")
         }
     }
     
