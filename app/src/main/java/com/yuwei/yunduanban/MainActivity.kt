@@ -137,9 +137,21 @@ class MainActivity : AppCompatActivity() {
             logs
         }
         
-        MaterialAlertDialogBuilder(this)
-            .setTitle("自动化运行日志")
-            .setMessage(logText)
+        // 创建可滚动的TextView
+        val scrollView = android.widget.ScrollView(this)
+        val textView = android.widget.TextView(this).apply {
+            text = logText
+            setPadding(40, 20, 40, 20)
+            textSize = 12f
+            setTextIsSelectable(true)
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+        scrollView.addView(textView)
+        
+        // 创建对话框
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle("自动化运行日志 (${LogManager.getLogs().size}条)")
+            .setView(scrollView)
             .setPositiveButton("确定", null)
             .setNeutralButton("清空日志") { _, _ ->
                 LogManager.clearLogs()
@@ -151,7 +163,14 @@ class MainActivity : AppCompatActivity() {
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(this, "日志已复制到剪贴板", Toast.LENGTH_SHORT).show()
             }
-            .show()
+            .create()
+        
+        dialog.show()
+        
+        // 对话框显示后，滚动到底部
+        scrollView.post {
+            scrollView.fullScroll(android.view.View.FOCUS_DOWN)
+        }
     }
     
     private fun isAccessibilityServiceEnabled(): Boolean {
@@ -190,11 +209,11 @@ class MainActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
-                // 清空之前的结果
+                // 清空之前的结果（但不清空日志，让用户查看历史记录）
                 AutomationDataManager.clearResults()
-                LogManager.clearLogs()
                 
-                LogManager.info("开始自动化任务，民警：$selectedPolice")
+                LogManager.info("========== 开始新的自动化任务 ==========")
+                LogManager.info("民警：$selectedPolice")
                 
                 // 通过Intent启动无障碍服务的自动化流程
                 val intent = Intent(this@MainActivity, YunDuanBanAccessibilityService::class.java)
