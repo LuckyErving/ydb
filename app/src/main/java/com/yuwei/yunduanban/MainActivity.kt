@@ -68,8 +68,13 @@ class MainActivity : AppCompatActivity() {
         LogManager.init(applicationContext)
         
         // 注册广播接收器
-        val filter = IntentFilter(YunDuanBanAccessibilityService.ACTION_TASK_STATUS_CHANGED)
-        registerReceiver(taskStatusReceiver, filter, RECEIVER_NOT_EXPORTED)
+        val filter = IntentFilter(YunDuanBanAccessibilityService.ACTION_TASK_CHANGED)
+        // Android 13+ 需要RECEIVER_NOT_EXPORTED，Android 10使用旧API
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(taskStatusReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(taskStatusReceiver, filter)
+        }
         
         setupUI()
         setupListeners()

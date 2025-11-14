@@ -86,6 +86,10 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         selectedPolice = policeName
         isRunning = true
         shouldStop = false
+        
+        // 启动前台服务（Android 14+要求）
+        startForegroundService()
+        
         notifyTaskStatusChanged(true)
         
         automationScope.launch {
@@ -98,6 +102,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 LogManager.error("自动化任务执行失败: ${e.message}")
             } finally {
                 isRunning = false
+                stopForegroundService()
                 notifyTaskStatusChanged(false)
                 Log.d(TAG, "自动化任务结束")
                 if (!shouldStop) {
@@ -111,8 +116,65 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         if (isRunning) {
             shouldStop = true
             isRunning = false
+            stopForegroundService()
             notifyTaskStatusChanged(false)
             automationScope.coroutineContext.cancelChildren()
+        }
+    }
+    
+    private fun startForegroundService() {
+        try {
+            // Android 8.0+ 需要通知渠道
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = android.app.NotificationChannel(
+                    "yunduanban_channel",
+                    "自动化任务",
+                    android.app.NotificationManager.IMPORTANCE_LOW
+                )
+                val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+                notificationManager?.createNotificationChannel(channel)
+            }
+            
+            // 创建通知（Android 8.0+ 使用渠道ID）
+            val notificationBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                android.app.Notification.Builder(this, "yunduanban_channel")
+            } else {
+                @Suppress("DEPRECATION")
+                android.app.Notification.Builder(this)
+            }
+            
+            val notification = notificationBuilder
+                .setContentTitle("云端办小助手")
+                .setContentText("自动化任务运行中...")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .build()
+            
+            // Android 14+ 需要指定前台服务类型，但Android 10不需要
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+            } else {
+                startForeground(1, notification)
+            }
+            
+            Log.d(TAG, "前台服务已启动")
+        } catch (e: Exception) {
+            Log.e(TAG, "启动前台服务失败", e)
+            LogManager.error("启动前台服务失败: ${e.message}")
+        }
+    }
+    
+    private fun stopForegroundService() {
+        try {
+            // Android 5.0+ 支持 stopForeground(int)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            Log.d(TAG, "前台服务已停止")
+        } catch (e: Exception) {
+            Log.e(TAG, "停止前台服务失败", e)
         }
     }
     
