@@ -120,11 +120,21 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     
     fun stopAutomation() {
         if (isRunning) {
+            Log.d(TAG, "正在停止自动化任务...")
+            LogManager.warning("正在停止自动化任务...")
             shouldStop = true
             isRunning = false
-            stopForegroundService()
-            notifyTaskStatusChanged(false)
+            
+            // 取消所有协程
             automationScope.coroutineContext.cancelChildren()
+            
+            // 停止前台服务
+            stopForegroundService()
+            
+            // 通知UI更新
+            notifyTaskStatusChanged(false)
+            
+            LogManager.warning("自动化任务已停止")
         }
     }
     
@@ -210,13 +220,19 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 主循环，最多150次
         for (i in 0 until 150) {
-            // 检查是否需要停止
-            if (shouldStop) {
+            // 检查协程是否被取消
+            if (!isActive || shouldStop) {
                 LogManager.warning("任务已被用户终止")
                 break
             }
             
             delay(150)
+            
+            // 再次检查
+            if (!isActive || shouldStop) {
+                LogManager.warning("任务已被用户终止")
+                break
+            }
             
             LogManager.info("处理第 ${i + 1} 条记录...")
             
@@ -235,6 +251,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             LogManager.info("检测到违法车辆: $weifacheliang")
             
             // 2. 复制违法时间
+            if (!isActive || shouldStop) break
             delay(150)
             performLongClick(332, 1950, 700)
             delay(600)
