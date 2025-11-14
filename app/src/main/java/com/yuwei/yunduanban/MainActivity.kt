@@ -51,10 +51,18 @@ class MainActivity : AppCompatActivity() {
             if (resultCode == RESULT_OK && data != null) {
                 // 将截屏权限传递给AccessibilityService
                 YunDuanBanAccessibilityService.instance?.setMediaProjection(resultCode, data)
-                Toast.makeText(this, "截屏权限已授予，OCR功能已启用", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "截屏权限已授予，正在启动自动化任务...", Toast.LENGTH_SHORT).show()
+                
+                // 延迟100ms确保MediaProjection初始化完成，然后启动自动化任务
+                binding.btnStart.postDelayed({
+                    startAutomation()
+                }, 100)
             } else {
                 Toast.makeText(this, "截屏权限被拒绝，OCR功能将无法使用", Toast.LENGTH_LONG).show()
                 LogManager.warning("用户拒绝了截屏权限")
+                // 恢复按钮状态
+                binding.btnStart.isEnabled = true
+                binding.btnStop.isEnabled = false
             }
         }
     }
