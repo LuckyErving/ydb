@@ -186,13 +186,21 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     private suspend fun runAutomation() = withContext(Dispatchers.Main) {
+        // 检查OCR是否已初始化
+        if (ocrManager == null) {
+            LogManager.error("OCR管理器未初始化！请先授予截屏权限")
+            return@withContext
+        }
+        
         // 请求截屏权限（需要MediaProjection API）
         delay(1000)
         
         // 1. 打开政务微信
         LogManager.info("正在打开政务微信...")
         launchApp("com.tencent.wework")
-        delay(1000)
+        delay(3000)  // 增加等待时间，确保应用完全打开
+        
+        LogManager.info("开始主循环，最多处理150条记录")
         
         // 主循环，最多150次
         for (i in 0 until 150) {
@@ -207,10 +215,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             LogManager.info("处理第 ${i + 1} 条记录...")
             
             // 检查是否有违法车辆信息
+            LogManager.info("正在识别违法车辆信息...")
             val weifacheliang = performOCR(150, 1888, 333, 116)
+            LogManager.info("OCR识别结果: '$weifacheliang'")
+            
             if (weifacheliang.isNullOrEmpty() || weifacheliang == "开始") {
-                Log.d(TAG, "未检测到违法车辆信息，结束循环")
-                LogManager.warning("未检测到违法车辆信息，结束循环")
+                Log.d(TAG, "未检测到违法车辆信息（结果: $weifacheliang），结束循环")
+                LogManager.warning("未检测到违法车辆信息（结果: '$weifacheliang'），结束循环")
                 break
             }
             
@@ -599,9 +610,17 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     
     private suspend fun performOCR(x: Int, y: Int, w: Int, h: Int): String? {
         return try {
-            ocrManager?.performOCR(x, y, w, h)
+            if (ocrManager == null) {
+                Log.e(TAG, "OCR管理器为null")
+                LogManager.error("OCR管理器未初始化")
+                return null
+            }
+            
+            val result = ocrManager?.performOCR(x, y, w, h)
+            Log.d(TAG, "OCR识别 ($x,$y,$w,$h) -> '$result'")
+            result
         } catch (e: Exception) {
-            Log.e(TAG, "OCR识别异常", e)
+            Log.e(TAG, "OCR识别异常 ($x,$y,$w,$h)", e)
             LogManager.error("OCR识别失败: ${e.message}")
             null
         }
@@ -610,24 +629,23 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     /**
      * 设置MediaProjection用于截屏
      * 需要在MainActivity获取权限后调用
-     * 注意：必须在前台服务启动后才能调用
+     * 注意：这里不启动前台服务，在startAutomationTask中统一启动
      */
     fun setMediaProjection(resultCode: Int, data: Intent) {
-        try {
-            // 先启动前台服务（Android 14+要求）
-            startForegroundService()
-            
-            // 延迟一下确保前台服务已启动
-            Thread.sleep(200)
-            
-            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-            val mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-            ocrManager?.initMediaProjection(mediaProjection)
-            Log.d(TAG, "MediaProjection初始化成功")
-            LogManager.info("截屏权限已获取，OCR功能已启用")
-        } catch (e: Exception) {
-            Log.e(TAG, "MediaProjection初始化失败", e)
-            LogManager.error("截屏权限获取失败: ${e.message}")
+        automationScope.launch {
+            try {
+                // 延迟一下，等待可能的前台服务启动
+                delay(300)
+                
+                val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                val mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+                ocrManager?.initMediaProjection(mediaProjection)
+                Log.d(TAG, "MediaProjection初始化成功")
+                LogManager.info("截屏权限已获取，OCR功能已启用")
+            } catch (e: Exception) {
+                Log.e(TAG, "MediaProjection初始化失败", e)
+                LogManager.error("截屏权限获取失败: ${e.message}")
+            }
         }
     }
 }
