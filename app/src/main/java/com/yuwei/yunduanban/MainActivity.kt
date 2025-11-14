@@ -46,17 +46,28 @@ class MainActivity : AppCompatActivity() {
     
     override fun onResume() {
         super.onResume()
-        // 每次回到前台时检查无障碍服务状态
-        checkAccessibilityServiceStatus()
+        // 每次回到前台时检查状态
+        updateUIStatus()
     }
     
-    private fun checkAccessibilityServiceStatus() {
+    private fun updateUIStatus() {
+        // 检查任务运行状态
+        if (YunDuanBanAccessibilityService.instance?.isTaskRunning() == true) {
+            binding.tvStatus.text = getString(R.string.status_running)
+            binding.btnStart.isEnabled = false
+        } else if (AutomationDataManager.getResults().isNotEmpty()) {
+            binding.tvStatus.text = getString(R.string.status_completed)
+            binding.btnStart.isEnabled = true
+        } else {
+            binding.tvStatus.text = getString(R.string.status_ready)
+            binding.btnStart.isEnabled = true
+        }
+        
+        // 检查无障碍服务状态
         if (!isAccessibilityServiceEnabled()) {
-            // 如果无障碍服务被关闭，显示提示
             binding.tvStatus.text = "⚠️ 无障碍服务已关闭，请重新开启"
             binding.tvStatus.setTextColor(getColor(android.R.color.holo_orange_dark))
-        } else {
-            binding.tvStatus.text = "✅ 无障碍服务已开启"
+        } else if (YunDuanBanAccessibilityService.instance?.isTaskRunning() != true) {
             binding.tvStatus.setTextColor(getColor(android.R.color.holo_green_dark))
         }
     }
@@ -239,20 +250,5 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, R.string.toast_copied, Toast.LENGTH_SHORT).show()
             }
             .show()
-    }
-    
-    override fun onResume() {
-        super.onResume()
-        // 检查服务状态并更新UI
-        if (YunDuanBanAccessibilityService.instance?.isTaskRunning() == true) {
-            binding.tvStatus.text = getString(R.string.status_running)
-            binding.btnStart.isEnabled = false
-        } else if (AutomationDataManager.getResults().isNotEmpty()) {
-            binding.tvStatus.text = getString(R.string.status_completed)
-            binding.btnStart.isEnabled = true
-        } else {
-            binding.tvStatus.text = getString(R.string.status_ready)
-            binding.btnStart.isEnabled = true
-        }
     }
 }
