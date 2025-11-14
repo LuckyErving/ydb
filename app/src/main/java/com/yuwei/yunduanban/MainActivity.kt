@@ -1,9 +1,11 @@
 package com.yuwei.yunduanban
 
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -25,6 +27,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var selectedPolice: String = "赵炜彦"
     
+    private val taskStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == YunDuanBanAccessibilityService.ACTION_TASK_STATUS_CHANGED) {
+                val isRunning = intent.getBooleanExtra(YunDuanBanAccessibilityService.EXTRA_IS_RUNNING, false)
+                runOnUiThread {
+                    updateUIStatus()
+                }
+            }
+        }
+    }
+    
     companion object {
         private const val PREFS_NAME = "YunDuanBanPrefs"
         private const val KEY_SELECTED_POLICE = "selected_police"
@@ -39,6 +52,10 @@ class MainActivity : AppCompatActivity() {
         // 初始化LogManager
         LogManager.init(applicationContext)
         
+        // 注册广播接收器
+        val filter = IntentFilter(YunDuanBanAccessibilityService.ACTION_TASK_STATUS_CHANGED)
+        registerReceiver(taskStatusReceiver, filter, RECEIVER_NOT_EXPORTED)
+        
         setupUI()
         setupListeners()
         loadLastSelection()
@@ -48,6 +65,16 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // 每次回到前台时检查状态
         updateUIStatus()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // 取消注册广播接收器
+        try {
+            unregisterReceiver(taskStatusReceiver)
+        } catch (e: Exception) {
+            // 忽略已取消注册的异常
+        }
     }
     
     private fun updateUIStatus() {

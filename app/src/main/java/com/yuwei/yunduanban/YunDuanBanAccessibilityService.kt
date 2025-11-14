@@ -10,6 +10,7 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.os.Build
 import android.util.Log
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.*
@@ -17,6 +18,7 @@ import kotlinx.coroutines.*
 class YunDuanBanAccessibilityService : AccessibilityService() {
     
     private var isRunning = false
+    private var shouldStop = false
     private var selectedPolice = ""
     private val automationScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     
@@ -24,9 +26,25 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         const val TAG = "YunDuanBanService"
         const val ACTION_START_AUTOMATION = "com.yuwei.yunduanban.START_AUTOMATION"
         const val EXTRA_POLICE_NAME = "police_name"
+        const val ACTION_TASK_STATUS_CHANGED = "com.yuwei.yunduanban.TASK_STATUS_CHANGED"
+        const val EXTRA_IS_RUNNING = "is_running"
         
         var instance: YunDuanBanAccessibilityService? = null
             private set
+    }
+    
+    override fun onKeyEvent(event: KeyEvent): Boolean {
+        // 监听音量上键来停止任务
+        if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP && event.action == KeyEvent.ACTION_DOWN) {
+            if (isRunning) {
+                Log.d(TAG, "用户按下音量上键，停止任务")
+                LogManager.warning("用户手动终止任务")
+                shouldStop = true
+                stopAutomation()
+                return true // 拦截按键，不触发音量调节
+            }
+        }
+        return super.onKeyEvent(event)
     }
     
     override fun onCreate() {
@@ -61,6 +79,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         selectedPolice = policeName
         isRunning = true
+        shouldStop = false
+        notifyTaskStatusChanged(true)
         
         automationScope.launch {
             try {
@@ -72,10 +92,29 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 LogManager.error("自动化任务执行失败: ${e.message}")
             } finally {
                 isRunning = false
+                notifyTaskStatusChanged(false)
                 Log.d(TAG, "自动化任务结束")
-                LogManager.info("自动化任务结束")
+                if (!shouldStop) {
+                    LogManager.success("自动化任务正常结束")
+                }
             }
         }
+    }
+    
+    fun stopAutomation() {
+        if (isRunning) {
+            shouldStop = true
+            isRunning = false
+            notifyTaskStatusChanged(false)
+            automationScope.coroutineContext.cancelChildren()
+        }
+    }
+    
+    private fun notifyTaskStatusChanged(isRunning: Boolean) {
+        val intent = Intent(ACTION_TASK_STATUS_CHANGED)
+        intent.putExtra(EXTRA_IS_RUNNING, isRunning)
+        intent.setPackage(packageName)
+        sendBroadcast(intent)
     }
     
     private suspend fun runAutomation() = withContext(Dispatchers.Main) {
@@ -89,6 +128,12 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
         // 主循环，最多150次
         for (i in 0 until 150) {
+            // 检查是否需要停止
+            if (shouldStop) {
+                LogManager.warning("任务已被用户终止")
+                break
+            }
+            
             delay(150)
             
             LogManager.info("处理第 ${i + 1} 条记录...")
