@@ -610,9 +610,16 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     /**
      * 设置MediaProjection用于截屏
      * 需要在MainActivity获取权限后调用
+     * 注意：必须在前台服务启动后才能调用
      */
     fun setMediaProjection(resultCode: Int, data: Intent) {
         try {
+            // 先启动前台服务（Android 14+要求）
+            startForegroundService()
+            
+            // 延迟一下确保前台服务已启动
+            Thread.sleep(200)
+            
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             val mediaProjection = projectionManager.getMediaProjection(resultCode, data)
             ocrManager?.initMediaProjection(mediaProjection)
