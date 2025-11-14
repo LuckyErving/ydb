@@ -19,18 +19,31 @@ android {
 
     signingConfigs {
         debug {
+            // Debug签名（本地开发用）
             storeFile file("../keystore/debug.keystore")
             storePassword "android"
             keyAlias "androiddebugkey"
             keyPassword "android"
         }
         release {
-            // 使用debug签名配置用于GitHub Actions自动构建
-            // 生产环境应使用单独的release keystore
-            storeFile file("../keystore/debug.keystore")
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
+            // Release签名（生产环境）
+            // 确保 keystore/release.keystore 文件存在
+            // 如果不存在，请参考 keystore/generate-keystore.md 生成
+            def keystoreFile = file("../keystore/release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword "yunduanban2025"
+                keyAlias "yunduanban"
+                keyPassword "yunduanban2025"
+            } else {
+                // 如果release.keystore不存在，回退到debug签名（仅用于首次构建）
+                println "WARNING: release.keystore not found! Using debug keystore as fallback."
+                println "Please generate release.keystore according to keystore/generate-keystore.md"
+                storeFile file("../keystore/debug.keystore")
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
         }
     }
 

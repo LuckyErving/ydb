@@ -57,8 +57,14 @@ jobs:
       id: keystore
       run: |
         if [ ! -f keystore/debug.keystore ]; then
-          mkdir -p keystore
+    - name: Generate Keystore if not exists
+      run: |
+        mkdir -p keystore
+        # 如果release.keystore不存在，生成debug.keystore作为备用
+        if [ ! -f keystore/release.keystore ] && [ ! -f keystore/debug.keystore ]; then
+          echo "Generating debug keystore as fallback..."
           keytool -genkeypair -v -keystore keystore/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+        fi
           echo "generated=true" >> $GITHUB_OUTPUT
         else
           echo "generated=false" >> $GITHUB_OUTPUT
