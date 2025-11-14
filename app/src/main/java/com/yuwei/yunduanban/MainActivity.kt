@@ -168,19 +168,16 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             
-            // Android 14+ 需要先启动前台服务，Android 10-13 不需要
+            // Android 10+ 都需要先启动前台服务（MediaProjection要求）
             YunDuanBanAccessibilityService.instance?.let { service ->
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    // Android 14+ 先启动前台服务
-                    service.startForegroundServiceOnly()
-                    // 延迟500ms确保前台服务完全启动
-                    binding.btnStart.postDelayed({
-                        requestScreenCapturePermission()
-                    }, 500)
-                } else {
-                    // Android 10-13 直接请求截屏权限
+                // 先启动前台服务
+                service.startForegroundServiceOnly()
+                
+                // 延迟800ms确保前台服务完全启动后再请求截屏权限
+                // Android 10需要更长时间确保服务就绪
+                binding.btnStart.postDelayed({
                     requestScreenCapturePermission()
-                }
+                }, 800)
             } ?: run {
                 Toast.makeText(this, "无障碍服务未启动", Toast.LENGTH_SHORT).show()
             }
