@@ -42,6 +42,21 @@ class MainActivity : AppCompatActivity() {
         private const val PREFS_NAME = "YunDuanBanPrefs"
         private const val KEY_SELECTED_POLICE = "selected_police"
         private const val KEY_SELECTED_POLICE_POSITION = "selected_police_position"
+        private const val REQUEST_MEDIA_PROJECTION = 1001
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_MEDIA_PROJECTION) {
+            if (resultCode == RESULT_OK && data != null) {
+                // 将截屏权限传递给AccessibilityService
+                YunDuanBanAccessibilityService.instance?.setMediaProjection(resultCode, data)
+                Toast.makeText(this, "截屏权限已授予，OCR功能已启用", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "截屏权限被拒绝，OCR功能将无法使用", Toast.LENGTH_LONG).show()
+                LogManager.warning("用户拒绝了截屏权限")
+            }
+        }
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -148,7 +163,8 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             
-            startAutomation()
+            // 请求截屏权限
+            requestScreenCapturePermission()
         }
         
         // 终止运行按钮
@@ -238,6 +254,11 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "无法打开无障碍设置", Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    private fun requestScreenCapturePermission() {
+        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
+        startActivityForResult(projectionManager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION)
     }
     
     private fun startAutomation() {

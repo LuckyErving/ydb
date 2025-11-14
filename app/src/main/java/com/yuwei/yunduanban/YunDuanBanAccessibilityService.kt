@@ -2,12 +2,14 @@ package com.yuwei.yunduanban
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.util.Log
 import android.view.KeyEvent
@@ -21,6 +23,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     private var shouldStop = false
     private var selectedPolice = ""
     private val automationScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private var ocrManager: OCRManager? = null
     
     companion object {
         const val TAG = "YunDuanBanService"
@@ -50,6 +53,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        ocrManager = OCRManager(applicationContext)
         Log.d(TAG, "云端办无障碍服务已创建")
     }
     
@@ -57,6 +61,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         super.onDestroy()
         instance = null
         automationScope.cancel()
+        ocrManager?.release()
+        ocrManager = null
         Log.d(TAG, "云端办无障碍服务已销毁")
     }
     
@@ -529,11 +535,30 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         return null
     }
     
-    private fun performOCR(x: Int, y: Int, w: Int, h: Int): String? {
-        // 这里需要使用MediaProjection API来截屏，然后使用Google ML Kit进行OCR
-        // 由于需要截屏权限和复杂的实现，这里返回模拟结果
-        // 实际项目中需要完整实现
-        Log.d(TAG, "执行OCR识别: ($x, $y, $w, $h)")
-        return null
+    private suspend fun performOCR(x: Int, y: Int, w: Int, h: Int): String? {
+        return try {
+            ocrManager?.performOCR(x, y, w, h)
+        } catch (e: Exception) {
+            Log.e(TAG, "OCR识别异常", e)
+            LogManager.error("OCR识别失败: ${e.message}")
+            null
+        }
+    }
+    
+    /**
+     * 设置MediaProjection用于截屏
+     * 需要在MainActivity获取权限后调用
+     */
+    fun setMediaProjection(resultCode: Int, data: Intent) {
+        try {
+            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+            ocrManager?.initMediaProjection(mediaProjection)
+            Log.d(TAG, "MediaProjection初始化成功")
+            LogManager.info("截屏权限已获取，OCR功能已启用")
+        } catch (e: Exception) {
+            Log.e(TAG, "MediaProjection初始化失败", e)
+            LogManager.error("截屏权限获取失败: ${e.message}")
+        }
     }
 }
