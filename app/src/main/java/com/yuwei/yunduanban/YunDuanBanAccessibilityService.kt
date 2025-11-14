@@ -87,8 +87,14 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         isRunning = true
         shouldStop = false
         
-        // 启动前台服务（Android 14+要求）
-        startForegroundService()
+        // 确保前台服务已启动（可能已经在startForegroundServiceOnly中启动）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                startForegroundService()
+            } catch (e: Exception) {
+                Log.w(TAG, "前台服务可能已启动", e)
+            }
+        }
         
         notifyTaskStatusChanged(true)
         
@@ -627,25 +633,30 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     /**
+     * 只启动前台服务，不执行任务（用于在请求截屏权限前启动）
+     */
+    fun startForegroundServiceOnly() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForegroundService()
+            Log.d(TAG, "前台服务已启动（仅服务）")
+        }
+    }
+    
+    /**
      * 设置MediaProjection用于截屏
      * 需要在MainActivity获取权限后调用
-     * 注意：这里不启动前台服务，在startAutomationTask中统一启动
+     * 注意：前台服务应该已经在请求权限前启动
      */
     fun setMediaProjection(resultCode: Int, data: Intent) {
-        automationScope.launch {
-            try {
-                // 延迟一下，等待可能的前台服务启动
-                delay(300)
-                
-                val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                val mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-                ocrManager?.initMediaProjection(mediaProjection)
-                Log.d(TAG, "MediaProjection初始化成功")
-                LogManager.info("截屏权限已获取，OCR功能已启用")
-            } catch (e: Exception) {
-                Log.e(TAG, "MediaProjection初始化失败", e)
-                LogManager.error("截屏权限获取失败: ${e.message}")
-            }
+        try {
+            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+            ocrManager?.initMediaProjection(mediaProjection)
+            Log.d(TAG, "MediaProjection初始化成功")
+            LogManager.info("截屏权限已获取，OCR功能已启用")
+        } catch (e: Exception) {
+            Log.e(TAG, "MediaProjection初始化失败", e)
+            LogManager.error("截屏权限获取失败: ${e.message}")
         }
     }
 }

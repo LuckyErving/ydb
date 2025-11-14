@@ -168,8 +168,22 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             
-            // 请求截屏权限
-            requestScreenCapturePermission()
+            // Android 14+ 需要先启动前台服务，Android 10-13 不需要
+            YunDuanBanAccessibilityService.instance?.let { service ->
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    // Android 14+ 先启动前台服务
+                    service.startForegroundServiceOnly()
+                    // 延迟500ms确保前台服务完全启动
+                    binding.btnStart.postDelayed({
+                        requestScreenCapturePermission()
+                    }, 500)
+                } else {
+                    // Android 10-13 直接请求截屏权限
+                    requestScreenCapturePermission()
+                }
+            } ?: run {
+                Toast.makeText(this, "无障碍服务未启动", Toast.LENGTH_SHORT).show()
+            }
         }
         
         // 终止运行按钮
