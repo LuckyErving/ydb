@@ -78,23 +78,29 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun updateUIStatus() {
+        val isRunning = YunDuanBanAccessibilityService.instance?.isTaskRunning() == true
+        
         // 检查任务运行状态
-        if (YunDuanBanAccessibilityService.instance?.isTaskRunning() == true) {
+        if (isRunning) {
             binding.tvStatus.text = getString(R.string.status_running)
             binding.btnStart.isEnabled = false
+            binding.btnStop.isEnabled = true
         } else if (AutomationDataManager.getResults().isNotEmpty()) {
             binding.tvStatus.text = getString(R.string.status_completed)
             binding.btnStart.isEnabled = true
+            binding.btnStop.isEnabled = false
         } else {
             binding.tvStatus.text = getString(R.string.status_ready)
             binding.btnStart.isEnabled = true
+            binding.btnStop.isEnabled = false
         }
         
         // 检查无障碍服务状态
         if (!isAccessibilityServiceEnabled()) {
             binding.tvStatus.text = "⚠️ 无障碍服务已关闭，请重新开启"
             binding.tvStatus.setTextColor(getColor(android.R.color.holo_orange_dark))
-        } else if (YunDuanBanAccessibilityService.instance?.isTaskRunning() != true) {
+            binding.btnStop.isEnabled = false
+        } else if (!isRunning) {
             binding.tvStatus.setTextColor(getColor(android.R.color.holo_green_dark))
         }
     }
@@ -143,6 +149,11 @@ class MainActivity : AppCompatActivity() {
             }
             
             startAutomation()
+        }
+        
+        // 终止运行按钮
+        binding.btnStop.setOnClickListener {
+            stopAutomation()
         }
         
         // 导出车牌按钮
@@ -232,6 +243,7 @@ class MainActivity : AppCompatActivity() {
     private fun startAutomation() {
         binding.tvStatus.text = getString(R.string.status_starting)
         binding.btnStart.isEnabled = false
+        binding.btnStop.isEnabled = true
         binding.btnExport.isEnabled = false
         
         lifecycleScope.launch {
@@ -262,8 +274,19 @@ class MainActivity : AppCompatActivity() {
             } finally {
                 withContext(Dispatchers.Main) {
                     binding.btnStart.isEnabled = true
+                    binding.btnStop.isEnabled = false
                     binding.btnExport.isEnabled = true
                 }
+            }
+        }
+    }
+    
+    private fun stopAutomation() {
+        YunDuanBanAccessibilityService.instance?.let { service ->
+            if (service.isTaskRunning()) {
+                LogManager.warning("用户点击按钮终止任务")
+                service.stopAutomation()
+                Toast.makeText(this, "正在终止任务...", Toast.LENGTH_SHORT).show()
             }
         }
     }

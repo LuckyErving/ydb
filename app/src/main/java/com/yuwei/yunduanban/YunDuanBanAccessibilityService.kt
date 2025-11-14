@@ -38,7 +38,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP && event.action == KeyEvent.ACTION_DOWN) {
             if (isRunning) {
                 Log.d(TAG, "用户按下音量上键，停止任务")
-                LogManager.warning("用户手动终止任务")
+                LogManager.warning("用户按音量上键终止任务")
                 shouldStop = true
                 stopAutomation()
                 return true // 拦截按键，不触发音量调节

@@ -62,17 +62,42 @@
             android:padding="8dp"
             android:gravity="center" />
 
-        <!-- 开始运行按钮 -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStart"
-            android:layout_width="200dp"
-            android:layout_height="60dp"
-            android:text="开始运行"
-            android:textSize="18sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#3498db"
-            app:cornerRadius="8dp"
-            android:layout_margin="16dp" />
+        <!-- 运行控制按钮组 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp">
+
+            <!-- 开始运行按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStart"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="开始运行"
+                android:textSize="18sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#3498db"
+                app:cornerRadius="8dp"
+                android:layout_marginEnd="8dp" />
+
+            <!-- 终止运行按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStop"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="终止运行"
+                android:textSize="18sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#e74c3c"
+                app:cornerRadius="8dp"
+                android:layout_marginStart="8dp"
+                android:enabled="false" />
+        </LinearLayout>
 
         <!-- 按钮组 -->
         <LinearLayout
@@ -163,7 +188,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="5. 点击[开始运行]按钮启动程序"
+                android:text="5. 完成后点击[导出车牌]复制已开单数据，发往政务微信做最后一步流程"
                 android:textSize="14sp"
                 android:textColor="#34495e"
                 android:lineSpacingExtra="4dp" />
