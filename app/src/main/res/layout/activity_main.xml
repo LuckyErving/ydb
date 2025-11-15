@@ -17,7 +17,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="云端办小助手"
+            android:text="云端办小助手v9.0"
             android:textSize="24sp"
             android:textColor="#2C3E50"
             android:textStyle="bold"
@@ -47,6 +47,19 @@
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/spinner_background" />
+            
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnManagePolice"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:text="管理"
+                android:textSize="14sp"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:backgroundTint="#7f8c8d"
+                android:textColor="#FFFFFF"
+                app:cornerRadius="6dp" />
         </LinearLayout>
 
         <!-- 服务状态提示 -->
@@ -217,7 +230,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:gravity="center"
             android:layout_marginTop="30dp">
 
@@ -227,6 +240,19 @@
                 android:text="新质战斗力未来中心 ©2025"
                 android:textSize="12sp"
                 android:textColor="#95a5a6" />
+            
+            <TextView
+                android:id="@+id/tvFeedback"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="问题反馈"
+                android:textSize="12sp"
+                android:textColor="#3498db"
+                android:layout_marginTop="8dp"
+                android:padding="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
         </LinearLayout>
 
     </LinearLayout>

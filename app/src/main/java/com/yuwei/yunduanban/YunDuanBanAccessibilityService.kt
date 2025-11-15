@@ -214,7 +214,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         // 1. 打开政务微信
         LogManager.info("正在打开政务微信...")
         launchApp("com.tencent.wework")
-        delay(3000)  // 增加等待时间，确保应用完全打开
+        delay(1000)  // 增加等待时间，确保应用完全打开
         
         LogManager.info("开始主循环，最多处理150条记录")
         
@@ -259,16 +259,16 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(500)
             
             // 3. 点击保存图片到相册
-            performClick(384, 1721)
-            delay(1900)
-            performLongClick(500, 1200, 800)
-            delay(100)
-            performClick(500, 1230)
-            delay(200)
+            // performClick(384, 1721)
+            // delay(1900)
+            // performLongClick(500, 1200, 800)
+            // delay(100)
+            // performClick(500, 1230)
+            // delay(200)
             
             // 4. 返回并切换到执法处理app
-            performBack()
-            delay(800)
+            // performBack()
+            // delay(800)
             openRecentApps()
             delay(800)
             
@@ -314,7 +314,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             LogManager.info("查询到车辆数据，开始处理")
             
             // 9. 点击开单按钮
-            delay(700)
+            // delay(700)
             val btnKd = findNodeById("btnKd")
             btnKd?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             delay(300)
@@ -323,6 +323,9 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             clickText("简易A版")
             delay(800)
             
+            performClick(520, 430) // 闯红灯选择
+            delay(800)
+
             performClick(530, 1320)
             delay(300)
             
@@ -416,7 +419,25 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(995, 352)
             delay(2500)
         }
-        
+
+        // 处理"interrupted"错误
+        while (findTextNode("interrupted") != null) {
+            LogManager.warning("检测到interrupted错误，正在处理")
+            performClick(540, 1298)
+            delay(100)
+            performClick(995, 352)
+            delay(2500)
+        }
+            
+        // 处理"请稍后"提示
+        while (findTextNode("请稍后") != null) {
+            LogManager.warning("检测到'请稍后'提示，正在处理")
+            performClick(560, 1280)
+            delay(100)
+            performClick(995, 352)
+            delay(2500)
+        }
+
         // 处理"unexpected end of"错误
         while (findTextNode("unexpected end of") != null) {
             LogManager.warning("检测到unexpected end of错误，正在处理")
@@ -428,6 +449,43 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     private suspend fun handleSpecialCases(weifacheliang: String) {
+        // 处理"请稍后"循环
+        while (findTextNode("请稍后") != null) {
+            LogManager.warning("等待系统响应...")
+            performClick(550, 1300)
+            delay(200)
+            
+            while (findTextNode("已取消业务数据校验") != null) {
+                LogManager.info("取消业务数据校验")
+                performClick(290, 1300) // 是
+                delay(800)
+                performClick(540, 2152)
+                delay(2000)
+            }
+        }
+
+        while (findTextNode("已取消业务数据校验") != null) {
+            LogManager.info("取消业务数据校验")
+            performClick(290, 1300) // 是
+            delay(800)
+            performClick(540, 2152)
+            delay(2000)
+        }
+
+        // 处理"骑手性质"选择
+        if (findTextNode("请选择骑手性质") != null) {
+            LogManager.info("选择骑手性质：众包")
+            performClick(540, 1298)
+            delay(600)
+            performClick(810, 1860)
+            delay(600)
+            clickText("众包")
+            delay(800)
+            performClick(540, 2158)
+            delay(600)
+        }
+
+
         // 处理"继续开单"情况
         if (findTextNode("继续开单") != null) {
             LogManager.info("检测到'继续开单'提示，按流程处理")
@@ -441,6 +499,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(800)
             deleteWeixinMessages(weifacheliang)
             return
+            // continue
         }
         
         // 处理"教育纠正"情况
@@ -466,6 +525,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(800)
             deleteWeixinMessages(weifacheliang)
             return
+            // continue
         }
         
         // 处理"首违警告"情况
@@ -478,34 +538,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(540, 2152) // 打印预览
             delay(2000)
         }
+
         
-        // 处理"请稍后"循环
-        while (findTextNode("请稍后") != null) {
-            LogManager.warning("等待系统响应...")
-            performClick(550, 1300)
-            delay(200)
-            
-            while (findTextNode("已取消业务数据校验") != null) {
-                LogManager.info("取消业务数据校验")
-                performClick(290, 1300) // 是
-                delay(800)
-                performClick(540, 2152)
-                delay(2000)
-            }
-        }
-        
-        // 处理"骑手性质"选择
-        if (findTextNode("请选择骑手性质") != null) {
-            LogManager.info("选择骑手性质：众包")
-            performClick(540, 1298)
-            delay(600)
-            performClick(810, 1860)
-            delay(600)
-            clickText("众包")
-            delay(800)
-            performClick(540, 2158)
-            delay(600)
-        }
     }
     
     private suspend fun deleteWeixinMessages(weifacheliang: String? = null) {
@@ -514,12 +548,14 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         delay(500)
         performLongClick(330, 1950, 800)
         delay(200)
-        performClick(540, 1371) // 多选
-        delay(200)
-        performClick(488, 1722)
-        delay(200)
-        performClick(945, 2145)
-        delay(600)
+        // performClick(540, 1371) // 多选
+        // delay(200)
+        // performClick(488, 1722)
+        // delay(200)
+        // performClick(945, 2145)
+        // delay(600)
+        performClick(540, 1530)
+        delay(800)
         performClick(834, 1251)
         delay(300)
         

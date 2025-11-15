@@ -12,6 +12,10 @@ import android.provider.Settings
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.ListView
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -26,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     
     private lateinit var binding: ActivityMainBinding
     private var selectedPolice: String = "赵炜彦"
+    private var policeList: MutableList<String> = mutableListOf()
     
     private val taskStatusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -42,6 +47,7 @@ class MainActivity : AppCompatActivity() {
         private const val PREFS_NAME = "YunDuanBanPrefs"
         private const val KEY_SELECTED_POLICE = "selected_police"
         private const val KEY_SELECTED_POLICE_POSITION = "selected_police_position"
+        private const val KEY_POLICE_LIST = "police_list_json"
         private const val REQUEST_MEDIA_PROJECTION = 1001
     }
     
@@ -134,20 +140,119 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun setupUI() {
-        // 设置民警选择下拉框
-        val policeNames = resources.getStringArray(R.array.police_names)
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, policeNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerPolice.adapter = adapter
-        
+        // 动态加载民警列表并设置下拉框
+        loadPoliceList()
+        refreshPoliceSpinner()
+
         binding.spinnerPolice.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedPolice = policeNames[position]
-                saveSelection(position, selectedPolice)
+                if (position in policeList.indices) {
+                    selectedPolice = policeList[position]
+                    saveSelection(position, selectedPolice)
+                }
             }
-            
+
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+
+        // 管理按钮（弹出管理对话框）
+        binding.btnManagePolice.setOnClickListener {
+            showManagePoliceDialog()
+        }
+    }
+
+    private fun loadPoliceList() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = prefs.getString(KEY_POLICE_LIST, null)
+        if (json.isNullOrEmpty()) {
+            // 使用默认资源数组作为初始数据
+            policeList = resources.getStringArray(R.array.police_names).toMutableList()
+            savePoliceList()
+        } else {
+            try {
+                val type = object : TypeToken<MutableList<String>>() {}.type
+                policeList = Gson().fromJson(json, type)
+            } catch (e: Exception) {
+                policeList = resources.getStringArray(R.array.police_names).toMutableList()
+            }
+        }
+    }
+
+    private fun savePoliceList() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = Gson().toJson(policeList)
+        prefs.edit().putString(KEY_POLICE_LIST, json).apply()
+    }
+
+    private fun refreshPoliceSpinner() {
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, policeList)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerPolice.adapter = adapter
+        // 恢复上次选择的位置
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val lastPosition = prefs.getInt(KEY_SELECTED_POLICE_POSITION, 0)
+        if (lastPosition in policeList.indices) {
+            binding.spinnerPolice.setSelection(lastPosition)
+            selectedPolice = policeList[lastPosition]
+        } else if (policeList.isNotEmpty()) {
+            binding.spinnerPolice.setSelection(0)
+            selectedPolice = policeList[0]
+        }
+    }
+
+    private fun showManagePoliceDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_manage_police, null)
+        val listView = dialogView.findViewById<ListView>(R.id.lvPolice)
+        val addBtn = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAddPolice)
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, policeList)
+        listView.adapter = adapter
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("管理民警列表")
+            .setView(dialogView)
+            .setNegativeButton("关闭", null)
+            .create()
+
+        // 长按删除
+        listView.setOnItemLongClickListener { _, _, position, _ ->
+            val name = policeList[position]
+            MaterialAlertDialogBuilder(this)
+                .setTitle("删除")
+                .setMessage("确认删除：$name ?")
+                .setPositiveButton("删除") { _, _ ->
+                    policeList.removeAt(position)
+                    savePoliceList()
+                    adapter.notifyDataSetChanged()
+                    refreshPoliceSpinner()
+                }
+                .setNegativeButton("取消", null)
+                .show()
+            true
+        }
+
+        addBtn.setOnClickListener {
+            val input = EditText(this)
+            input.hint = "输入民警姓名"
+            MaterialAlertDialogBuilder(this)
+                .setTitle("添加民警")
+                .setView(input)
+                .setPositiveButton("添加") { _, _ ->
+                    val name = input.text.toString().trim()
+                    if (name.isNotEmpty()) {
+                        policeList.add(name)
+                        savePoliceList()
+                        adapter.notifyDataSetChanged()
+                        refreshPoliceSpinner()
+                    } else {
+                        Toast.makeText(this, "姓名不能为空", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        }
+
+        dialog.show()
     }
     
     private fun loadLastSelection() {
@@ -204,6 +309,11 @@ class MainActivity : AppCompatActivity() {
         // 查看日志按钮
         binding.btnViewLog.setOnClickListener {
             showLogDialog()
+        }
+        
+        // 问题反馈按钮
+        binding.tvFeedback.setOnClickListener {
+            showFeedbackDialog()
         }
     }
     
@@ -363,6 +473,22 @@ class MainActivity : AppCompatActivity() {
                 clipboard.setPrimaryClip(clip2)
                 Toast.makeText(this, R.string.toast_copied, Toast.LENGTH_SHORT).show()
             }
+            .show()
+    }
+    
+    private fun showFeedbackDialog() {
+        val message = "如遇到问题或需要帮助，请联系：\n\n叶裕威（13538772957）"
+        
+        MaterialAlertDialogBuilder(this)
+            .setTitle("问题反馈")
+            .setMessage(message)
+            .setPositiveButton("复制联系方式") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("联系方式", "叶裕威：13538772957")
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "联系方式已复制到剪贴板", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("关闭", null)
             .show()
     }
 }
