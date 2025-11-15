@@ -11,6 +11,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // 华为Maven仓库（用于HMS SDK）
+        maven { url 'https://developer.huawei.com/repo/' }
     }
 }
 
