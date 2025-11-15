@@ -89,9 +89,9 @@ dependencies {
     implementation 'com.google.mlkit:text-recognition-chinese:16.0.0'
     implementation 'com.google.mlkit:text-recognition:16.0.0'
     
-    // Huawei ML Kit for OCR (华为设备优化)
-    implementation 'com.huawei.hms:ml-computer-vision-ocr:3.12.0.300'
-    implementation 'com.huawei.hms:ml-computer-vision-ocr-cn-model:3.12.0.300'
+    // Huawei ML Kit for OCR (华为设备优化) - 使用较低版本确保兼容性
+    implementation 'com.huawei.hms:ml-computer-vision-ocr:3.11.0.301'
+    implementation 'com.huawei.hms:ml-computer-vision-ocr-cn-model:3.11.0.301'
     
     // Gson for JSON serialization
     implementation 'com.google.code.gson:gson:2.10.1'

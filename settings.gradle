@@ -12,7 +12,12 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         // 华为Maven仓库（用于HMS SDK）
-        maven { url 'https://developer.huawei.com/repo/' }
+        maven { 
+            url 'https://developer.huawei.com/repo/'
+            allowInsecureProtocol = false
+        }
+        // 备用：华为开发者联盟仓库
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
 }
 
