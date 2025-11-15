@@ -15,6 +15,11 @@ android {
         versionName "2.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // 解决华为ML Kit namespace冲突
+        manifestPlaceholders = [
+            huaweiMLKitNamespace: 'com.yuwei.yunduanban.mlkit.ocr'
+        ]
     }
 
     signingConfigs {
