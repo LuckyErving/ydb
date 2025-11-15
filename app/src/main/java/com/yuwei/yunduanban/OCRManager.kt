@@ -8,7 +8,6 @@ import android.hardware.display.VirtualDisplay
 import android.media.Image
 import android.media.ImageReader
 import android.media.projection.MediaProjection
-import android.media.projection.MediaProjectionManager
 import android.os.Handler
 import android.os.Looper
 import android.util.DisplayMetrics
@@ -17,19 +16,31 @@ import android.view.WindowManager
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.huawei.hms.mlsdk.MLAnalyzerFactory
+import com.huawei.hms.mlsdk.common.MLFrame
+import com.huawei.hms.mlsdk.text.MLLocalTextSetting
+import com.huawei.hms.mlsdk.text.MLTextAnalyzer
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * OCR截屏和文字识别管理器
+ * 支持华为ML Kit和Google ML Kit双引擎
  */
 class OCRManager(private val context: Context) {
     
     private var mediaProjection: MediaProjection? = null
     private var imageReader: ImageReader? = null
     private var virtualDisplay: VirtualDisplay? = null
-    private val textRecognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+    
+    // Google ML Kit识别器
+    private val googleTextRecognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+    
+    // 华为ML Kit识别器
+    private var huaweiTextAnalyzer: MLTextAnalyzer? = null
+    
+    // OCR引擎类型
+    private var ocrEngine: OCREngine = OCREngine.UNKNOWN
     
     private val displayMetrics = DisplayMetrics()
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -39,8 +50,37 @@ class OCRManager(private val context: Context) {
         private const val VIRTUAL_DISPLAY_NAME = "YunDuanBan-ScreenCapture"
     }
     
+    enum class OCREngine {
+        HUAWEI_ML_KIT,  // 华为ML Kit（华为设备优先）
+        GOOGLE_ML_KIT,  // Google ML Kit（通用方案）
+        UNKNOWN         // 未初始化
+    }
+    
     init {
         windowManager.defaultDisplay.getMetrics(displayMetrics)
+        initOCREngine()
+    }
+    
+    /**
+     * 初始化OCR引擎，优先使用华为ML Kit
+     */
+    private fun initOCREngine() {
+        try {
+            // 尝试初始化华为ML Kit
+            val setting = MLLocalTextSetting.Factory()
+                .setOCRMode(MLLocalTextSetting.OCR_DETECT_MODE)
+                .setLanguage("zh")
+                .create()
+            huaweiTextAnalyzer = MLAnalyzerFactory.getInstance().getLocalTextAnalyzer(setting)
+            ocrEngine = OCREngine.HUAWEI_ML_KIT
+            Log.i(TAG, "✅ 使用华为ML Kit OCR引擎")
+            LogManager.info("🚀 OCR引擎：华为ML Kit（识别更准确）")
+        } catch (e: Exception) {
+            // 华为ML Kit不可用，使用Google ML Kit
+            ocrEngine = OCREngine.GOOGLE_ML_KIT
+            Log.i(TAG, "✅ 使用Google ML Kit OCR引擎")
+            LogManager.info("🚀 OCR引擎：Google ML Kit（通用方案）")
+        }
     }
     
     /**
@@ -191,20 +231,73 @@ class OCRManager(private val context: Context) {
     }
     
     /**
-     * 使用ML Kit识别文字
+     * 使用对应引擎识别文字
      */
-    private suspend fun recognizeText(bitmap: Bitmap): String? = suspendCancellableCoroutine { continuation ->
-        val inputImage = InputImage.fromBitmap(bitmap, 0)
-        
-        textRecognizer.process(inputImage)
-            .addOnSuccessListener { visionText ->
-                val text = visionText.text.trim()
+    private suspend fun recognizeText(bitmap: Bitmap): String? {
+        return when (ocrEngine) {
+            OCREngine.HUAWEI_ML_KIT -> recognizeTextWithHuawei(bitmap)
+            OCREngine.GOOGLE_ML_KIT -> recognizeTextWithGoogle(bitmap)
+            OCREngine.UNKNOWN -> {
+                Log.e(TAG, "OCR引擎未初始化")
+                null
+            }
+        }
+    }
+    
+    /**
+     * 使用华为ML Kit识别文字
+     */
+    private suspend fun recognizeTextWithHuawei(bitmap: Bitmap): String? = suspendCancellableCoroutine { continuation ->
+        try {
+            val frame = MLFrame.fromBitmap(bitmap)
+            val task = huaweiTextAnalyzer?.asyncAnalyseFrame(frame)
+            
+            task?.addOnSuccessListener { mlText ->
+                val text = mlText?.stringValue?.trim() ?: ""
+                Log.d(TAG, "[华为ML Kit] 识别结果: $text")
                 continuation.resume(if (text.isNotEmpty()) text else null)
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "文字识别失败", e)
+            }?.addOnFailureListener { e ->
+                Log.e(TAG, "[华为ML Kit] 识别失败", e)
                 continuation.resume(null)
-            }
+            } ?: continuation.resume(null)
+        } catch (e: Exception) {
+            Log.e(TAG, "[华为ML Kit] 识别异常", e)
+            continuation.resume(null)
+        }
+    }
+    
+    /**
+     * 使用Google ML Kit识别文字
+     */
+    private suspend fun recognizeTextWithGoogle(bitmap: Bitmap): String? = suspendCancellableCoroutine { continuation ->
+        try {
+            val inputImage = InputImage.fromBitmap(bitmap, 0)
+            
+            googleTextRecognizer.process(inputImage)
+                .addOnSuccessListener { visionText ->
+                    val text = visionText.text.trim()
+                    Log.d(TAG, "[Google ML Kit] 识别结果: $text")
+                    continuation.resume(if (text.isNotEmpty()) text else null)
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "[Google ML Kit] 识别失败", e)
+                    continuation.resume(null)
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "[Google ML Kit] 识别异常", e)
+            continuation.resume(null)
+        }
+    }
+    
+    /**
+     * 获取当前使用的OCR引擎
+     */
+    fun getOCREngineName(): String {
+        return when (ocrEngine) {
+            OCREngine.HUAWEI_ML_KIT -> "华为ML Kit"
+            OCREngine.GOOGLE_ML_KIT -> "Google ML Kit"
+            OCREngine.UNKNOWN -> "未知"
+        }
     }
     
     /**
@@ -220,6 +313,17 @@ class OCRManager(private val context: Context) {
         mediaProjection?.stop()
         mediaProjection = null
         
-        textRecognizer.close()
+        try {
+            googleTextRecognizer.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "关闭Google识别器失败", e)
+        }
+        
+        try {
+            huaweiTextAnalyzer?.stop()
+            huaweiTextAnalyzer = null
+        } catch (e: Exception) {
+            Log.e(TAG, "关闭华为识别器失败", e)
+        }
     }
 }
