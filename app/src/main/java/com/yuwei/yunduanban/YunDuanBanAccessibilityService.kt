@@ -615,11 +615,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     private suspend fun performLongClick(x: Int, y: Int, duration: Long) {
-        // 自动缩放坐标
-        val (scaledX, scaledY) = CoordinateScaler.scalePoint(x, y)
+        // 不缩放坐标，直接使用实际屏幕坐标
+        Log.d(TAG, "长按: 坐标($x,$y), duration=$duration")
         
         val path = Path().apply {
-            moveTo(scaledX.toFloat(), scaledY.toFloat())
+            moveTo(x.toFloat(), y.toFloat())
         }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
