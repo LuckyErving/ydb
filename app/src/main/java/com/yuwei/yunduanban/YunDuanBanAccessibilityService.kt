@@ -312,13 +312,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             // 6. 粘贴号牌搜索
             performClick(740, 355)
-            delay(100)
+            delay(200)
             performClick(890, 348)
-            delay(100)
+            delay(200)
             performLongClick(740, 355, 800)
             delay(300)
             performClick(261, 238)
-            delay(100)
+            delay(200)
             performClick(995, 352) // 点击搜索
             delay(3000)
             
