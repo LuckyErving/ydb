@@ -342,7 +342,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             // delay(700)
             val btnKd = findNodeById("btnKd")
             btnKd?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            delay(300)
+            delay(500) // 增加等待时间，确保按钮点击完成
             
             // 10. 选择简易A版
             clickText("简易A版")
@@ -593,11 +593,26 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     
     // ============= 辅助方法 =============
     
-    private fun launchApp(packageName: String) {
+    private suspend fun launchApp(packageName: String) {
         val intent = packageManager.getLaunchIntentForPackage(packageName)
         intent?.let {
             it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(it)
+        }
+        // 等待应用启动完成（检查当前应用包名）
+        var retryCount = 0
+        while (retryCount < 20) {
+            delay(200)
+            val root = rootInActiveWindow
+            if (root?.packageName?.toString() == packageName) {
+                Log.d(TAG, "应用 $packageName 已启动")
+                delay(500) // 额外等待UI稳定
+                break
+            }
+            retryCount++
+        }
+        if (retryCount >= 20) {
+            LogManager.warning("启动应用 $packageName 超时")
         }
     }
     
@@ -649,12 +664,21 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         dispatchGesture(gesture, callback, null)
     }
     
-    private fun performBack() {
+    private suspend fun performBack() {
+        val beforePackage = rootInActiveWindow?.packageName?.toString()
         performGlobalAction(GLOBAL_ACTION_BACK)
+        delay(300)
+        // 如果包名没变，再等待一下
+        val afterPackage = rootInActiveWindow?.packageName?.toString()
+        if (beforePackage == afterPackage) {
+            delay(300)
+        }
     }
     
-    private fun openRecentApps() {
+    private suspend fun openRecentApps() {
         performGlobalAction(GLOBAL_ACTION_RECENTS)
+        delay(500) // 等待最近任务界面打开（增加等待时间）
+        // 最近任务界面需要更多时间渲染
     }
     
     private fun findTextNode(text: String): AccessibilityNodeInfo? {
@@ -682,22 +706,38 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         return nodes.firstOrNull()
     }
     
-    private fun clickText(text: String) {
+    private suspend fun clickText(text: String) {
         val node = findTextNode(text)
-        node?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        val success = node?.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
+        if (success) {
+            delay(300) // 等待点击操作完成
+        } else {
+            LogManager.warning("点击文本'$text'失败")
+            delay(500) // 失败时等待更久
+        }
     }
     
-    private fun inputText(text: String) {
+    private suspend fun inputText(text: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("input", text)
         clipboard.setPrimaryClip(clip)
+        delay(150) // 等待剪贴板设置完成
         
         // 找到输入框并粘贴
         val root = rootInActiveWindow
         root?.let {
             val editText = findEditText(it)
-            editText?.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-            editText?.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+            if (editText != null) {
+                val focusSuccess = editText.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                delay(150) // 等待焦点设置完成
+                val pasteSuccess = editText.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+                delay(250) // 等待粘贴操作完成
+                if (!focusSuccess || !pasteSuccess) {
+                    LogManager.warning("输入文本失败: focus=$focusSuccess, paste=$pasteSuccess")
+                }
+            } else {
+                LogManager.warning("未找到输入框")
+            }
         }
     }
     
