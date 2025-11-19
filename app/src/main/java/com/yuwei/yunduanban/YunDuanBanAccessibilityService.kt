@@ -272,11 +272,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             Log.d(TAG, "检测到违法车辆: $weifacheliang")
             LogManager.info("检测到违法车辆: $weifacheliang")
             
-            // 2. 复制违法时间
+            // 2. 复制违法车辆号牌
             if (!isActive || shouldStop) break
             delay(150)
             performLongClick(332, 1950, 700)
-            delay(600)
+            delay(800)
             performClick(540, 800)
             delay(500)
             
@@ -314,11 +314,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(740, 355)
             delay(200)
             performClick(890, 348)
-            delay(200)
+            delay(600)
             performLongClick(740, 355, 800)
             delay(300)
             performClick(261, 238)
-            delay(200)
+            delay(300)
             performClick(995, 352) // 点击搜索
             delay(3000)
             
@@ -361,11 +361,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(810, 303)
             delay(500)
             performClick(975, 1228)
-            delay(200)
+            delay(300)
             
             // 12. 输入民警信息
             inputText(selectedPolice)
-            delay(200)
+            delay(300)
             performClick(980, 336) // 搜索
             delay(500)
             performClick(540, 490)
@@ -379,11 +379,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(540, 1298)
             delay(500)
             performClick(194, 1521)
-            delay(200)
+            delay(300)
             clickText("相册")
             delay(1500)
             performClick(260, 595)
-            delay(100)
+            delay(300)
             performClick(990, 165)
             delay(400)
             performClick(540, 2152)
@@ -428,7 +428,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         while (findTextNode("interrupted") != null) {
             LogManager.warning("检测到interrupted错误，正在处理")
             performClick(540, 1298)
-            delay(100)
+            delay(300)
             performClick(995, 352)
             delay(2500)
         }
@@ -437,7 +437,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         while (findTextNode("请稍后") != null) {
             LogManager.warning("检测到'请稍后'提示，正在处理")
             performClick(560, 1280)
-            delay(100)
+            delay(300)
             performClick(995, 352)
             delay(2500)
         }
@@ -446,7 +446,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         while (findTextNode("interrupted") != null) {
             LogManager.warning("检测到interrupted错误，正在处理")
             performClick(540, 1298)
-            delay(100)
+            delay(300)
             performClick(995, 352)
             delay(2500)
         }
@@ -455,7 +455,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         while (findTextNode("请稍后") != null) {
             LogManager.warning("检测到'请稍后'提示，正在处理")
             performClick(560, 1280)
-            delay(100)
+            delay(300)
             performClick(995, 352)
             delay(2500)
         }
@@ -464,7 +464,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         while (findTextNode("unexpected end of") != null) {
             LogManager.warning("检测到unexpected end of错误，正在处理")
             performClick(530, 1360)
-            delay(100)
+            delay(300)
             performClick(995, 352)
             delay(2500)
         }
@@ -475,7 +475,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         while (findTextNode("请稍后") != null) {
             LogManager.warning("等待系统响应...")
             performClick(550, 1300)
-            delay(200)
+            delay(300)
             
             while (findTextNode("已取消业务数据校验") != null) {
                 LogManager.info("取消业务数据校验")
