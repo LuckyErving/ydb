@@ -16,6 +16,9 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 class YunDuanBanAccessibilityService : AccessibilityService() {
     
@@ -598,7 +601,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         }
     }
     
-    private suspend fun performClick(x: Int, y: Int) {
+    private suspend fun performClick(x: Int, y: Int) = suspendCancellableCoroutine<Unit> { continuation ->
         // 自动缩放坐标
         val (scaledX, scaledY) = CoordinateScaler.scalePoint(x, y)
         
@@ -609,12 +612,20 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
             .build()
         
-        withContext(Dispatchers.Main) {
-            dispatchGesture(gesture, null, null)
+        val callback = object : AccessibilityService.GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                continuation.resume(Unit) {}
+            }
+            
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                continuation.resume(Unit) {}
+            }
         }
+        
+        dispatchGesture(gesture, callback, null)
     }
     
-    private suspend fun performLongClick(x: Int, y: Int, duration: Long) {
+    private suspend fun performLongClick(x: Int, y: Int, duration: Long) = suspendCancellableCoroutine<Unit> { continuation ->
         // 不缩放坐标，直接使用实际屏幕坐标
         Log.d(TAG, "长按: 坐标($x,$y), duration=$duration")
         
@@ -625,9 +636,17 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
             .build()
         
-        withContext(Dispatchers.Main) {
-            dispatchGesture(gesture, null, null)
+        val callback = object : AccessibilityService.GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                continuation.resume(Unit) {}
+            }
+            
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                continuation.resume(Unit) {}
+            }
         }
+        
+        dispatchGesture(gesture, callback, null)
     }
     
     private fun performBack() {
