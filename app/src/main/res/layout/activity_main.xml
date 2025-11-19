@@ -62,6 +62,46 @@
                 app:cornerRadius="6dp" />
         </LinearLayout>
 
+        <!-- 政务微信包名配置 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wework_package_label"
+                android:textSize="14sp"
+                android:textColor="#2C3E50" />
+
+            <EditText
+                android:id="@+id/etWeworkPackage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:hint="@string/wework_package_hint"
+                android:textSize="13sp"
+                android:singleLine="true"
+                android:inputType="text"
+                android:padding="8dp"
+                android:background="@drawable/spinner_background" />
+        </LinearLayout>
+
+        <!-- 屏幕分辨率信息 -->
+        <TextView
+            android:id="@+id/tvScreenInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/screen_info_label"
+            android:textSize="13sp"
+            android:textColor="#7f8c8d"
+            android:layout_marginBottom="12dp"
+            android:gravity="center" />
+
         <!-- 服务状态提示 -->
         <TextView
             android:id="@+id/tvStatus"
@@ -232,7 +272,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:layout_marginTop="30dp">
+            android:layout_marginTop="10dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -248,8 +288,8 @@
                 android:text="问题反馈"
                 android:textSize="12sp"
                 android:textColor="#3498db"
-                android:layout_marginTop="8dp"
-                android:padding="8dp"
+                android:layout_marginTop="2dp"
+                android:padding="2dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:background="?attr/selectableItemBackground" />

@@ -39,4 +39,10 @@
         <item>罗海威</item>
         <item>李谋挺</item>
     </string-array>
+    
+    <!-- 政务微信包名 -->
+    <string name="wework_package_label">政务微信包名：</string>
+    <string name="wework_package_hint">输入政务微信包名</string>
+    <string name="default_wework_package">com.tencent.wework</string>
+    <string name="screen_info_label">屏幕分辨率：</string>
 </resources>

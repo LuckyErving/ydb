@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.text.TextWatcher
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_SELECTED_POLICE = "selected_police"
         private const val KEY_SELECTED_POLICE_POSITION = "selected_police_position"
         private const val KEY_POLICE_LIST = "police_list_json"
+        private const val KEY_WEWORK_PACKAGE = "wework_package_name"
         private const val REQUEST_MEDIA_PROJECTION = 1001
     }
     
@@ -57,12 +59,12 @@ class MainActivity : AppCompatActivity() {
             if (resultCode == RESULT_OK && data != null) {
                 // 将截屏权限传递给AccessibilityService
                 YunDuanBanAccessibilityService.instance?.setMediaProjection(resultCode, data)
-                Toast.makeText(this, "截屏权限已授予，正在启动自动化任务...", Toast.LENGTH_SHORT).show()
+                // Toast.makeText(this, "截屏权限已授予，正在启动自动化任务...", Toast.LENGTH_SHORT).show()
                 
-                // 延迟100ms确保MediaProjection初始化完成，然后启动自动化任务
+                // 延迟600ms确保MediaProjection初始化完成，然后启动自动化任务
                 binding.btnStart.postDelayed({
                     startAutomation()
-                }, 100)
+                }, 600)
             } else {
                 Toast.makeText(this, "截屏权限被拒绝，OCR功能将无法使用", Toast.LENGTH_LONG).show()
                 LogManager.warning("用户拒绝了截屏权限")
@@ -159,6 +161,12 @@ class MainActivity : AppCompatActivity() {
         binding.btnManagePolice.setOnClickListener {
             showManagePoliceDialog()
         }
+        
+        // 加载政务微信包名配置
+        loadWeworkPackage()
+        
+        // 显示屏幕分辨率信息
+        displayScreenInfo()
     }
 
     private fun loadPoliceList() {
@@ -176,6 +184,44 @@ class MainActivity : AppCompatActivity() {
                 policeList = resources.getStringArray(R.array.police_names).toMutableList()
             }
         }
+    }
+    
+    private fun loadWeworkPackage() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val packageName = prefs.getString(KEY_WEWORK_PACKAGE, getString(R.string.default_wework_package))
+        binding.etWeworkPackage.setText(packageName)
+        
+        // 监听文本变化，自动保存
+        binding.etWeworkPackage.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                saveWeworkPackage(s.toString())
+            }
+        })
+    }
+    
+    private fun saveWeworkPackage(packageName: String) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_WEWORK_PACKAGE, packageName).apply()
+    }
+    
+    fun getWeworkPackage(): String {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_WEWORK_PACKAGE, getString(R.string.default_wework_package)) ?: getString(R.string.default_wework_package)
+    }
+    
+    private fun displayScreenInfo() {
+        val displayMetrics = resources.displayMetrics
+        val width = displayMetrics.widthPixels
+        val height = displayMetrics.heightPixels
+        val density = displayMetrics.density
+        val dpi = displayMetrics.densityDpi
+        
+        val info = "屏幕分辨率：${width}x${height} | 密度：${density} | DPI：${dpi}"
+        binding.tvScreenInfo.text = info
+        
+        LogManager.info("📱 $info")
     }
 
     private fun savePoliceList() {
@@ -418,7 +464,7 @@ class MainActivity : AppCompatActivity() {
                 YunDuanBanAccessibilityService.instance?.startAutomationTask(selectedPolice)
                 
                 binding.tvStatus.text = getString(R.string.status_running)
-                Toast.makeText(this@MainActivity, "自动化任务已启动", Toast.LENGTH_SHORT).show()
+                // Toast.makeText(this@MainActivity, "自动化任务已启动", Toast.LENGTH_SHORT).show()
                 
             } catch (e: Exception) {
                 LogManager.error("启动失败: ${e.message}")

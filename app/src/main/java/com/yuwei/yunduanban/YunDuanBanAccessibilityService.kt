@@ -25,6 +25,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     private val automationScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var ocrManager: OCRManager? = null
     
+    // 屏幕尺寸信息
+    private var screenWidth = 0
+    private var screenHeight = 0
+    private var screenDensity = 0f
+    
     companion object {
         const val TAG = "YunDuanBanService"
         const val ACTION_START_AUTOMATION = "com.yuwei.yunduanban.START_AUTOMATION"
@@ -54,7 +59,18 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         super.onCreate()
         instance = this
         ocrManager = OCRManager(applicationContext)
+        
+        // 初始化屏幕尺寸
+        val displayMetrics = resources.displayMetrics
+        screenWidth = displayMetrics.widthPixels
+        screenHeight = displayMetrics.heightPixels
+        screenDensity = displayMetrics.density
+        
+        // 初始化坐标缩放器
+        CoordinateScaler.init(screenWidth, screenHeight)
+        
         Log.d(TAG, "云端办无障碍服务已创建")
+        LogManager.info("📱 屏幕: ${screenWidth}x${screenHeight}, 密度: $screenDensity")
     }
     
     override fun onDestroy() {
@@ -201,6 +217,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         sendBroadcast(intent)
     }
     
+    private fun getWeworkPackage(): String {
+        val prefs = getSharedPreferences("YunDuanBanPrefs", Context.MODE_PRIVATE)
+        return prefs.getString("wework_package_name", "com.tencent.weworklocal") ?: "com.tencent.weworklocal"
+    }
+    
     private suspend fun runAutomation() = withContext(Dispatchers.Main) {
         // 检查OCR是否已初始化
         if (ocrManager == null) {
@@ -212,8 +233,9 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         delay(1000)
         
         // 1. 打开政务微信
-        LogManager.info("正在打开政务微信...")
-        launchApp("com.tencent.wework")
+        val weworkPackage = getWeworkPackage()
+        LogManager.info("正在打开政务微信... (包名: $weworkPackage)")
+        launchApp(weworkPackage)
         delay(1000)  // 增加等待时间，确保应用完全打开
         
         LogManager.info("开始主循环，最多处理150条记录")
@@ -544,7 +566,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     
     private suspend fun deleteWeixinMessages(weifacheliang: String? = null) {
         LogManager.info("清理微信消息${if (weifacheliang != null) "：$weifacheliang" else ""}")
-        launchApp("com.tencent.wework")
+        val weworkPackage = getWeworkPackage()
+        launchApp(weworkPackage)
         delay(500)
         performLongClick(330, 1950, 800)
         delay(200)
@@ -576,8 +599,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     private suspend fun performClick(x: Int, y: Int) {
+        // 自动缩放坐标
+        val (scaledX, scaledY) = CoordinateScaler.scalePoint(x, y)
+        
         val path = Path().apply {
-            moveTo(x.toFloat(), y.toFloat())
+            moveTo(scaledX.toFloat(), scaledY.toFloat())
         }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
@@ -589,8 +615,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     private suspend fun performLongClick(x: Int, y: Int, duration: Long) {
+        // 自动缩放坐标
+        val (scaledX, scaledY) = CoordinateScaler.scalePoint(x, y)
+        
         val path = Path().apply {
-            moveTo(x.toFloat(), y.toFloat())
+            moveTo(scaledX.toFloat(), scaledY.toFloat())
         }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
@@ -675,8 +704,12 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 return null
             }
             
-            val result = ocrManager?.performOCR(x, y, w, h)
-            Log.d(TAG, "OCR识别 ($x,$y,$w,$h) -> '$result'")
+            // 自动缩放OCR区域坐标和尺寸
+            val scaled = CoordinateScaler.scaleRect(x, y, w, h)
+            val (scaledX, scaledY, scaledW, scaledH) = scaled
+            
+            val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
+            Log.d(TAG, "OCR识别 原始($x,$y,$w,$h) 缩放后($scaledX,$scaledY,$scaledW,$scaledH) -> '$result'")
             result
         } catch (e: Exception) {
             Log.e(TAG, "OCR识别异常 ($x,$y,$w,$h)", e)
