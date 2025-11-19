@@ -316,7 +316,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(890, 348)
             delay(600)
             performLongClick(740, 355, 800)
-            delay(300)
+            delay(900)
             performClick(261, 238)
             delay(300)
             performClick(995, 352) // 点击搜索
@@ -570,7 +570,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         launchApp(weworkPackage)
         delay(500)
         performLongClick(330, 1950, 800)
-        delay(200)
+        delay(800)
         // performClick(540, 1371) // 多选
         // delay(200)
         // performClick(488, 1722)
