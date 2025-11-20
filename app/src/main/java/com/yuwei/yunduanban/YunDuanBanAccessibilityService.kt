@@ -621,10 +621,10 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     
     private suspend fun performClick(x: Int, y: Int) = suspendCancellableCoroutine<Unit> { continuation ->
         // 自动缩放坐标
-        val (scaledX, scaledY) = CoordinateScaler.scalePoint(x, y)
+        // val (scaledX, scaledY) = CoordinateScaler.scalePoint(x, y)
         
         val path = Path().apply {
-            moveTo(scaledX.toFloat(), scaledY.toFloat())
+            moveTo(x.toFloat(), y.toFloat())
         }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
@@ -690,7 +690,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     }
     
     private fun findNodeByText(node: AccessibilityNodeInfo, text: String): AccessibilityNodeInfo? {
+        // 检查text属性
         if (node.text?.contains(text) == true) {
+            return node
+        }
+        
+        // 检查contentDescription属性
+        if (node.contentDescription?.contains(text) == true) {
             return node
         }
         
@@ -754,15 +760,48 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         return success
     }
     
-    private suspend fun clickText(text: String) {
-        val node = findTextNode(text)
-        val success = node?.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
+    private suspend fun clickText(text: String): Boolean {
+        var node = findTextNode(text)
+        
+        if (node == null) {
+            LogManager.warning("未找到文本'$text'的节点")
+            delay(500)
+            return false
+        }
+        
+        Log.d(TAG, "找到文本'$text'的节点: className=${node.className}, clickable=${node.isClickable}, enabled=${node.isEnabled}")
+        
+        // 如果当前节点不可点击，尝试查找可点击的父节点
+        var clickableNode = node
+        if (!node.isClickable && !node.isEnabled) {
+            var parent = node.parent
+            var depth = 0
+            while (parent != null && depth < 5) {
+                if (parent.isClickable || parent.isEnabled) {
+                    Log.d(TAG, "找到可点击的父节点: depth=$depth, className=${parent.className}")
+                    clickableNode = parent
+                    break
+                }
+                parent = parent.parent
+                depth++
+            }
+            
+            if (!clickableNode.isClickable && !clickableNode.isEnabled) {
+                LogManager.warning("文本'$text'的节点及其父节点都不可点击")
+                delay(500)
+                return false
+            }
+        }
+        
+        val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         if (success) {
-            delay(300) // 等待点击操作完成
+            Log.d(TAG, "点击文本'$text'成功")
+            delay(500) // 等待点击操作完成
         } else {
             LogManager.warning("点击文本'$text'失败")
-            delay(500) // 失败时等待更久
+            delay(500)
         }
+        return success
     }
     
     private suspend fun inputText(text: String) {
