@@ -339,10 +339,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             LogManager.info("查询到车辆数据，开始处理")
             
             // 9. 点击开单按钮
-            // delay(700)
-            val btnKd = findNodeById("btnKd")
-            btnKd?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            delay(500) // 增加等待时间，确保按钮点击完成
+            LogManager.info("正在点击开单按钮...")
+            val clickSuccess = clickNodeById("btnKd")
+            if (!clickSuccess) {
+                LogManager.error("点击开单按钮失败！！！")
+                // deleteWeixinMessages()
+                // continue
+            }
             
             // 10. 选择简易A版
             clickText("简易A版")
@@ -702,8 +705,53 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
     
     private fun findNodeById(id: String): AccessibilityNodeInfo? {
         val root = rootInActiveWindow ?: return null
-        val nodes = root.findAccessibilityNodeInfosByViewId(id)
-        return nodes.firstOrNull()
+        
+        // 先尝试原始ID
+        var nodes = root.findAccessibilityNodeInfosByViewId(id)
+        if (nodes.isNotEmpty()) {
+            return nodes.firstOrNull()
+        }
+        
+        // 如果ID不包含":"，尝试添加当前应用包名
+        if (!id.contains(":")) {
+            val packageName = root.packageName?.toString() ?: ""
+            if (packageName.isNotEmpty()) {
+                val fullId = "$packageName:id/$id"
+                nodes = root.findAccessibilityNodeInfosByViewId(fullId)
+                if (nodes.isNotEmpty()) {
+                    Log.d(TAG, "使用完整ID找到节点: $fullId")
+                    return nodes.firstOrNull()
+                }
+            }
+        }
+        
+        Log.w(TAG, "未找到ID为 $id 的节点")
+        return null
+    }
+    
+    private suspend fun clickNodeById(id: String): Boolean {
+        val node = findNodeById(id)
+        if (node == null) {
+            LogManager.warning("未找到ID为'$id'的节点")
+            delay(500)
+            return false
+        }
+        
+        if (!node.isClickable && !node.isEnabled) {
+            LogManager.warning("节点'$id'不可点击")
+            delay(500)
+            return false
+        }
+        
+        val success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        if (success) {
+            Log.d(TAG, "点击节点'$id'成功")
+            delay(500) // 等待点击操作完成
+        } else {
+            LogManager.warning("点击节点'$id'失败")
+            delay(500)
+        }
+        return success
     }
     
     private suspend fun clickText(text: String) {
