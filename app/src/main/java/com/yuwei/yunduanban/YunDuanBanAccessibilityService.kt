@@ -772,7 +772,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         Log.d(TAG, "找到文本'$text'的节点: className=${node.className}, clickable=${node.isClickable}, enabled=${node.isEnabled}")
         
         // 如果当前节点不可点击，尝试查找可点击的父节点
-        var clickableNode = node
+        var clickableNode: AccessibilityNodeInfo = node
         if (!node.isClickable && !node.isEnabled) {
             var parent = node.parent
             var depth = 0
@@ -793,7 +793,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             }
         }
         
-        val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
+        val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         if (success) {
             Log.d(TAG, "点击文本'$text'成功")
             delay(500) // 等待点击操作完成
