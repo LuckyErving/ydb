@@ -343,12 +343,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             val clickSuccess = clickNodeById("btnKd")
             if (!clickSuccess) {
                 LogManager.error("点击开单按钮失败！！！")
+            }
                 // deleteWeixinMessages()
                 // continue
-            }
             
             // 10. 选择简易A版
-            clickText("简易A版")
+            // clickText("简易A版")
+            clickNodeById("btnYes")
             delay(800)
             
             performClick(520, 430) // 闯红灯选择
@@ -386,7 +387,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(500)
             performClick(194, 1521)
             delay(300)
-            clickText("相册")
+            // clickText("相册")
+            performClick(540,1293)
             delay(1500)
             performClick(260, 595)
             delay(300)
@@ -419,7 +421,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             performClick(308, 1298) // 是
             delay(1000)
-            clickText("确定")
+            // clickText("确定")
+            performClick(540,1298)
             delay(1000)
             
             // 18. 删除微信消息并添加车牌到结果
@@ -549,7 +552,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(800)
             performClick(308, 1298) // 是
             delay(1000)
-            clickText("确定")
+            // clickText("确定")
+            performClick(540,1298)
             delay(800)
             deleteWeixinMessages(weifacheliang)
             return
