@@ -393,7 +393,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(260, 595)
             delay(300)
             performClick(990, 165)
-            delay(400)
+            delay(800)
             performClick(540, 2152)
             delay(2000)
             
