@@ -793,7 +793,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             }
         }
         
-        val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
         if (success) {
             Log.d(TAG, "点击文本'$text'成功")
             delay(500) // 等待点击操作完成
