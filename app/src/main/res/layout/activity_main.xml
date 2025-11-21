@@ -187,6 +187,19 @@
                 app:cornerRadius="8dp"
                 android:layout_marginStart="8dp" />
         </LinearLayout>
+        
+        <!-- YDB专用图按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveImage"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="YDB专用图"
+            android:textSize="15sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#f39c12"
+            app:cornerRadius="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
 
         <!-- 使用说明 -->
         <LinearLayout

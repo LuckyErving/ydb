@@ -23,6 +23,12 @@
     
     <!-- Android 13+ 发送通知权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- 写入外部存储（保存图片到相册） -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
         android:allowBackup="false"

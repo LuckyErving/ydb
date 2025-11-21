@@ -6,9 +6,17 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.text.TextWatcher
 import android.view.View
 import android.widget.AdapterView
@@ -51,6 +59,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_POLICE_LIST = "police_list_json"
         private const val KEY_WEWORK_PACKAGE = "wework_package_name"
         private const val REQUEST_MEDIA_PROJECTION = 1001
+        private const val REQUEST_STORAGE_PERMISSION = 1002
     }
     
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -361,6 +370,11 @@ class MainActivity : AppCompatActivity() {
         binding.tvFeedback.setOnClickListener {
             showFeedbackDialog()
         }
+        
+        // YDB专用图按钮
+        binding.btnSaveImage.setOnClickListener {
+            saveImageToGallery()
+        }
     }
     
     private fun showLogDialog() {
@@ -536,5 +550,92 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("关闭", null)
             .show()
+    }
+    
+    private fun saveImageToGallery() {
+        // Android 10+ 不需要存储权限，使用 MediaStore API
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            saveImageToGalleryQ()
+        } else {
+            // Android 9 及以下需要检查权限
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                    REQUEST_STORAGE_PERMISSION
+                )
+            } else {
+                saveImageToGalleryLegacy()
+            }
+        }
+    }
+    
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_STORAGE_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                saveImageToGalleryLegacy()
+            } else {
+                Toast.makeText(this, "需要存储权限才能保存图片", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun saveImageToGalleryQ() {
+        try {
+            // 从资源加载图片
+            val bitmap = BitmapFactory.decodeResource(resources, R.drawable.ydb_special_image)
+            
+            // 使用 MediaStore API 保存到相册
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "云端办专用图_${System.currentTimeMillis()}.jpg")
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/云端办")
+                }
+            }
+            
+            val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            
+            uri?.let {
+                contentResolver.openOutputStream(it)?.use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                }
+                Toast.makeText(this, "图片已保存到相册", Toast.LENGTH_SHORT).show()
+                LogManager.info("YDB专用图已保存到相册")
+            } ?: run {
+                Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            LogManager.error("保存图片失败: ${e.message}")
+        }
+    }
+    
+    private fun saveImageToGalleryLegacy() {
+        try {
+            val bitmap = BitmapFactory.decodeResource(resources, R.drawable.ydb_special_image)
+            val savedImageURL = MediaStore.Images.Media.insertImage(
+                contentResolver,
+                bitmap,
+                "云端办专用图_${System.currentTimeMillis()}",
+                "云端办专用图"
+            )
+            
+            if (savedImageURL != null) {
+                Toast.makeText(this, "图片已保存到相册", Toast.LENGTH_SHORT).show()
+                LogManager.info("YDB专用图已保存到相册")
+            } else {
+                Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            LogManager.error("保存图片失败: ${e.message}")
+        }
     }
 }

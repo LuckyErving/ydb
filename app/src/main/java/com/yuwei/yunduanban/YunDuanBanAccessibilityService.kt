@@ -266,7 +266,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             val weifacheliang = performOCR(150, 1888, 333, 116)
             LogManager.info("OCR识别结果: '$weifacheliang'")
             
-            if (weifacheliang.isNullOrEmpty() || weifacheliang == "开始") {
+            if (weifacheliang.isNullOrEmpty() || weifacheliang.contains("开始")) {
                 Log.d(TAG, "未检测到违法车辆信息（结果: $weifacheliang），结束循环")
                 LogManager.warning("未检测到违法车辆信息（结果: '$weifacheliang'），结束循环")
                 break
@@ -427,6 +427,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             // 18. 删除微信消息并添加车牌到结果
             deleteWeixinMessages(weifacheliang)
+            performClick()
         }
         
         Log.d(TAG, "自动化流程完成")
@@ -590,7 +591,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         performClick(540, 1530)
         delay(800)
         performClick(834, 1251)
-        delay(300)
+        delay(500)
+        performClick(998, 1469)
         
         weifacheliang?.let {
             AutomationDataManager.addResult(it)
