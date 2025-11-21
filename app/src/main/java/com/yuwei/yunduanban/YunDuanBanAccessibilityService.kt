@@ -427,7 +427,6 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             // 18. 删除微信消息并添加车牌到结果
             deleteWeixinMessages(weifacheliang)
-            performClick()
         }
         
         Log.d(TAG, "自动化流程完成")
