@@ -161,6 +161,19 @@
             android:layout_marginTop="0dp"
             android:layout_marginBottom="8dp">
 
+            <!-- 车牌管理按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlateManager"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="车牌管理"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#e67e22"
+                app:cornerRadius="8dp"
+                android:layout_marginEnd="4dp" />
+
             <!-- 导出车牌按钮 -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnExport"
@@ -172,7 +185,8 @@
                 android:textColor="#FFFFFF"
                 android:backgroundTint="#2ecc71"
                 app:cornerRadius="8dp"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp" />
 
             <!-- 查看日志按钮 -->
             <com.google.android.material.button.MaterialButton
@@ -185,7 +199,7 @@
                 android:textColor="#FFFFFF"
                 android:backgroundTint="#9b59b6"
                 app:cornerRadius="8dp"
-                android:layout_marginStart="8dp" />
+                android:layout_marginStart="4dp" />
         </LinearLayout>
         
         <!-- YDB专用图按钮 -->

@@ -259,7 +259,14 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             return@withContext
         }
         
-        LogManager.info("开始主循环，最多处理150条记录")
+        // 检查是否使用批量模式
+        val useBatchMode = LicensePlateManager.getPendingPlates().isNotEmpty()
+        
+        if (useBatchMode) {
+            LogManager.info("📋 批量模式：共${LicensePlateManager.getPendingPlates().size}个待处理车牌")
+        } else {
+            LogManager.info("📱 微信模式：从政务微信识别车牌")
+        }
         
         // 主循环，最多150次
         for (i in 0 until 150) {
@@ -279,86 +286,114 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             LogManager.info("处理第 ${i + 1} 条记录...")
             
-            // 检查是否有违法车辆信息（添加重试机制）
-            LogManager.info("正在识别违法车辆信息...")
             var weifacheliang: String? = null
-            var ocrRetryCount = 0
-            val maxOcrRetries = 3
             
-            while (ocrRetryCount < maxOcrRetries) {
-                weifacheliang = performOCR(150, 1888, 333, 116)
+            if (useBatchMode) {
+                // 批量模式：从列表获取下一个待处理车牌
+                weifacheliang = LicensePlateManager.getNextPendingPlate()
                 
-                if (weifacheliang != null) {
-                    LogManager.info("OCR识别成功: '$weifacheliang'")
+                if (weifacheliang == null) {
+                    LogManager.success("✅ 所有车牌已处理完成！")
                     break
+                }
+                
+                LogManager.info("📋 从列表获取车牌: $weifacheliang")
+                
+                // 直接切换到云端办
+                openRecentApps()
+                delay(800)
+                
+                if (i == 0) {
+                    performClick(80, 1200)
                 } else {
-                    ocrRetryCount++
-                    if (ocrRetryCount < maxOcrRetries) {
-                        LogManager.warning("OCR识别返回null，重试 ($ocrRetryCount/$maxOcrRetries)...")
-                        delay(500)  // 等待界面稳定
+                    performClick(540, 1170)
+                }
+                delay(600)
+                
+            } else {
+                // 微信模式：OCR识别车牌
+                LogManager.info("正在识别违法车辆信息...")
+                var ocrRetryCount = 0
+                val maxOcrRetries = 3
+                
+                while (ocrRetryCount < maxOcrRetries) {
+                    weifacheliang = performOCR(150, 1888, 333, 116)
+                    
+                    if (weifacheliang != null) {
+                        LogManager.info("OCR识别成功: '$weifacheliang'")
+                        break
                     } else {
-                        LogManager.error("OCR识别失败，已重试${maxOcrRetries}次")
+                        ocrRetryCount++
+                        if (ocrRetryCount < maxOcrRetries) {
+                            LogManager.warning("OCR识别返回null，重试 ($ocrRetryCount/$maxOcrRetries)...")
+                            delay(500)
+                        } else {
+                            LogManager.error("OCR识别失败，已重试${maxOcrRetries}次")
+                        }
                     }
                 }
+                
+                // 检查OCR结果
+                if (weifacheliang.isNullOrEmpty() || weifacheliang.contains("开始")) {
+                    Log.d(TAG, "未检测到违法车辆信息（结果: $weifacheliang），结束循环")
+                    LogManager.warning("未检测到违法车辆信息（结果: '$weifacheliang'），结束循环")
+                    break
+                }
+                
+                Log.d(TAG, "检测到违法车辆: $weifacheliang")
+                LogManager.info("检测到违法车辆: $weifacheliang")
+                
+                // 复制违法车辆号牌
+                if (!isActive || shouldStop) break
+                delay(150)
+                performLongClick(332, 1950, 700)
+                delay(800)
+                performClick(540, 800)
+                delay(500)
+                
+                // 切换到云端办
+                openRecentApps()
+                delay(800)
+                
+                if (i == 0) {
+                    performClick(80, 1200)
+                } else {
+                    performClick(540, 1170)
+                }
+                delay(600)
             }
             
-            // 检查OCR结果
-            if (weifacheliang.isNullOrEmpty() || weifacheliang.contains("开始")) {
-                Log.d(TAG, "未检测到违法车辆信息（结果: $weifacheliang），结束循环")
-                LogManager.warning("未检测到违法车辆信息（结果: '$weifacheliang'），结束循环")
-                break
-            }
-            
-            Log.d(TAG, "检测到违法车辆: $weifacheliang")
-            LogManager.info("检测到违法车辆: $weifacheliang")
-            
-            // 2. 复制违法车辆号牌
-            if (!isActive || shouldStop) break
-            delay(150)
-            performLongClick(332, 1950, 700)
-            delay(800)
-            performClick(540, 800)
-            delay(500)
-            
-            // 3. 点击保存图片到相册
-            // performClick(384, 1721)
-            // delay(1900)
-            // performLongClick(500, 1200, 800)
-            // delay(100)
-            // performClick(500, 1230)
-            // delay(200)
-            
-            // 4. 返回并切换到执法处理app
-            // performBack()
-            // delay(800)
-            openRecentApps()
-            delay(800)
-            
-            if (i == 0) {
-                performClick(80, 1200)
-            } else {
-                performClick(540, 1170)
-            }
-            delay(600)
-            
-            // 5. 检查是否在云端办界面
+            // 检查是否在云端办界面
             val yunduanban = performOCR(450, 128, 165, 75)
             if (yunduanban != "云端办") {
                 Log.d(TAG, "未在云端办界面，退出")
                 LogManager.error("未在云端办界面，退出流程")
+                if (useBatchMode) {
+                    LicensePlateManager.markAsFailed(weifacheliang!!)
+                }
                 break
             }
             LogManager.info("已进入云端办界面")
             
-            // 6. 粘贴号牌搜索
-            performClick(740, 355)
-            delay(200)
-            performClick(890, 348)
-            delay(600)
-            performLongClick(740, 355, 800)
-            delay(900)
-            performClick(261, 238)
-            delay(300)
+            // 粘贴或输入号牌搜索
+            if (useBatchMode) {
+                // 批量模式：直接输入车牌号
+                performClick(740, 355)
+                delay(200)
+                inputText(weifacheliang!!)
+                delay(300)
+            } else {
+                // 微信模式：粘贴车牌号
+                performClick(740, 355)
+                delay(200)
+                performClick(890, 348)
+                delay(600)
+                performLongClick(740, 355, 800)
+                delay(900)
+                performClick(261, 238)
+                delay(300)
+            }
+            
             performClick(995, 352) // 点击搜索
             delay(3000)
             
@@ -370,8 +405,15 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 LogManager.warning("未查询到数据，跳过此条")
                 performClick(540, 1298)
                 delay(400)
-                deleteWeixinMessages()
-                // performClick(998, 1469)
+                
+                if (useBatchMode) {
+                    // 批量模式：标记为失败
+                    LicensePlateManager.markAsFailed(weifacheliang!!)
+                    LogManager.warning("车牌 $weifacheliang 标记为失败")
+                } else {
+                    // 微信模式：删除微信消息
+                    deleteWeixinMessages()
+                }
                 continue
             }
             LogManager.info("查询到车辆数据，开始处理")
@@ -485,9 +527,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 delay(800)
                 performClick(308, 1298) // 是
                 delay(800)
-                deleteWeixinMessages(weifacheliang)
-                // performClick(998, 1469)
-                // return
+                finishPlateProcessing(weifacheliang, useBatchMode)
                 continue
             }
         
@@ -496,7 +536,6 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 LogManager.info("检测到'教育纠正'条件")
                 if (findTextNode("民警当日开具的简易程序已达") != null) {
                     LogManager.warning("已达到开单上限")
-                    // return
                     break
                 }
                 performClick(773, 1478) // 否
@@ -506,7 +545,6 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 val dangchangchufayulann = performOCR(324, 128, 502, 73)
                 if (dangchangchufayulann != "当场处罚打印预览") {
                     LogManager.error("教育纠正打印预览界面异常")
-                    // return
                     break
                 }
                 delay(800)
@@ -515,10 +553,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 // clickText("确定")
                 performClick(540,1298)
                 delay(800)
-                deleteWeixinMessages(weifacheliang)
-                // delay(800)
-                // performClick(998, 1469)
-                // return
+                finishPlateProcessing(weifacheliang, useBatchMode)
                 continue
                 }
         
@@ -558,12 +593,16 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(540,1298)
             delay(1000)
             
-            // 18. 删除微信消息并添加车牌到结果
-            deleteWeixinMessages(weifacheliang)
-            // performClick(998, 1469)
+            // 18. 处理完成后的操作
+            finishPlateProcessing(weifacheliang, useBatchMode)
         }
         
         Log.d(TAG, "自动化流程完成")
+        
+        if (useBatchMode) {
+            val stats = LicensePlateManager.getStatistics()
+            LogManager.success("🎉 批量处理完成！总数:${stats["total"]} 已完成:${stats["completed"]} 失败:${stats["failed"]}")
+        }
     }
     
     private suspend fun handleErrorDialogs() {
@@ -709,6 +748,22 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         }
 
         
+    }
+    
+    /**
+     * 完成处理：标记车牌状态（批量模式）或删除微信消息（微信模式）
+     */
+    private suspend fun finishPlateProcessing(plateNumber: String?, useBatchMode: Boolean) {
+        plateNumber?.let {
+            if (useBatchMode) {
+                // 批量模式：标记为已完成
+                LicensePlateManager.markAsCompleted(it)
+                LogManager.success("✅ 车牌 $it 已完成")
+            } else {
+                // 微信模式：删除微信消息并记录
+                deleteWeixinMessages(it)
+            }
+        }
     }
     
     private suspend fun deleteWeixinMessages(weifacheliang: String? = null) {
