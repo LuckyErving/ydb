@@ -220,11 +220,6 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         sendBroadcast(intent)
     }
     
-    private fun getWeworkPackage(): String {
-        val prefs = getSharedPreferences("YunDuanBanPrefs", Context.MODE_PRIVATE)
-        return prefs.getString("wework_package_name", "com.tencent.weworklocal") ?: "com.tencent.weworklocal"
-    }
-    
     private suspend fun runAutomation() = withContext(Dispatchers.Main) {
         // 检查OCR是否已初始化
         if (ocrManager == null) {
@@ -232,37 +227,21 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             return@withContext
         }
         
-        // 请求截屏权限（需要MediaProjection API）
-        delay(1000)
-        
-        // 1. 打开政务微信
-        val weworkPackage = getWeworkPackage()
-        LogManager.info("正在打开政务微信... (包名: $weworkPackage)")
-        launchApp(weworkPackage)
-        delay(1500)  // 增加等待时间，确保应用完全打开和界面加载完成
-        
-        // 验证界面是否就绪（通过检查rootInActiveWindow）
-        var interfaceReady = false
-        for (retry in 1..5) {
-            val root = rootInActiveWindow
-            if (root != null && root.packageName?.toString() == weworkPackage) {
-                LogManager.info("✅ 政务微信界面已就绪")
-                interfaceReady = true
-                break
-            }
-            LogManager.warning("等待政务微信界面就绪... (尝试 $retry/5)")
-            delay(500)
-        }
-        
-        if (!interfaceReady) {
-            LogManager.error("政务微信界面未就绪，无法继续执行")
+        // 检查是否有待处理的车牌
+        val pendingPlates = LicensePlateManager.getPendingPlates()
+        if (pendingPlates.isEmpty()) {
+            LogManager.error("❌ 没有待处理的车牌！请先在车牌管理中导入车牌号")
             return@withContext
         }
         
-        LogManager.info("开始主循环，最多处理150条记录")
+        val totalCount = pendingPlates.size
+        LogManager.info("📋 批量模式：共${totalCount}个待处理车牌")
         
-        // 主循环，最多150次
-        for (i in 0 until 150) {
+        // 请求截屏权限（需要MediaProjection API）
+        delay(1000)
+        
+        // 主循环，根据待处理车牌数量决定次数
+        for (i in 0 until totalCount) {
             // 检查协程是否被取消
             if (!isActive || shouldStop) {
                 LogManager.warning("任务已被用户终止")
@@ -277,76 +256,32 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 break
             }
             
-            LogManager.info("处理第 ${i + 1} 条记录...")
+            LogManager.info("处理第 ${i + 1}/$totalCount 条记录...")
             
-            // 检查是否有违法车辆信息（添加重试机制）
-            LogManager.info("正在识别违法车辆信息...")
-            var weifacheliang: String? = null
-            var ocrRetryCount = 0
-            val maxOcrRetries = 3
+            // 从列表获取下一个待处理车牌
+            val weifacheliang = LicensePlateManager.getNextPendingPlate()
             
-            while (ocrRetryCount < maxOcrRetries) {
-                weifacheliang = performOCR(150, 1888, 333, 116)
-                
-                if (weifacheliang != null) {
-                    LogManager.info("OCR识别成功: '$weifacheliang'")
-                    break
-                } else {
-                    ocrRetryCount++
-                    if (ocrRetryCount < maxOcrRetries) {
-                        LogManager.warning("OCR识别返回null，重试 ($ocrRetryCount/$maxOcrRetries)...")
-                        delay(500)  // 等待界面稳定
-                    } else {
-                        LogManager.error("OCR识别失败，已重试${maxOcrRetries}次")
-                    }
-                }
-            }
-            
-            // 检查OCR结果
-            if (weifacheliang.isNullOrEmpty() || weifacheliang.contains("开始")) {
-                Log.d(TAG, "未检测到违法车辆信息（结果: $weifacheliang），结束循环")
-                LogManager.warning("未检测到违法车辆信息（结果: '$weifacheliang'），结束循环")
+            if (weifacheliang == null) {
+                LogManager.success("✅ 所有车牌已处理完成！")
                 break
             }
             
-            Log.d(TAG, "检测到违法车辆: $weifacheliang")
-            LogManager.info("检测到违法车辆: $weifacheliang")
+            LogManager.info("📋 当前车牌: $weifacheliang")
             
-            // 2. 复制违法车辆号牌
-            if (!isActive || shouldStop) break
-            delay(150)
-            performLongClick(332, 1950, 700)
-            delay(800)
-            performClick(540, 800)
-            delay(500)
-            
-            // 3. 点击保存图片到相册
-            // performClick(384, 1721)
-            // delay(1900)
-            // performLongClick(500, 1200, 800)
-            // delay(100)
-            // performClick(500, 1230)
-            // delay(200)
-            
-            // 4. 返回并切换到执法处理app
-            // performBack()
-            // delay(800)
+            // 切换到云端办
             openRecentApps()
             delay(800)
             
-            if (i == 0) {
-                performClick(80, 1200)
-            } else {
-                performClick(540, 1170)
-            }
+            performClick(540, 1170)
             delay(600)
             
-            // 5. 检查是否在云端办界面
+            // 检查是否在云端办界面
             val yunduanban = performOCR(450, 128, 165, 75)
             if (yunduanban != "云端办") {
-                Log.d(TAG, "未在云端办界面，退出")
-                LogManager.error("未在云端办界面，退出流程")
-                break
+                Log.d(TAG, "未在云端办界面")
+                LogManager.error("未在云端办界面，标记失败")
+                LicensePlateManager.markAsFailed(weifacheliang, "无法进入云端办界面")
+                continue
             }
             LogManager.info("已进入云端办界面")
             
@@ -365,13 +300,12 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             // 7. 处理各种错误提示
             handleErrorDialogs()
             
-            // 8. 检查是否未查询到数据
+            // 检查是否未查询到数据
             if (findTextNode("未查询到数据") != null) {
                 LogManager.warning("未查询到数据，跳过此条")
                 performClick(540, 1298)
                 delay(400)
-                deleteWeixinMessages()
-                // performClick(998, 1469)
+                LicensePlateManager.markAsFailed(weifacheliang, "未查询到车辆数据")
                 continue
             }
             LogManager.info("查询到车辆数据，开始处理")
@@ -485,9 +419,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 delay(800)
                 performClick(308, 1298) // 是
                 delay(800)
-                deleteWeixinMessages(weifacheliang)
-                // performClick(998, 1469)
-                // return
+                LicensePlateManager.markAsCompleted(weifacheliang)
+                LogManager.success("✅ 车牌 $weifacheliang 已完成")
                 continue
             }
         
@@ -515,10 +448,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 // clickText("确定")
                 performClick(540,1298)
                 delay(800)
-                deleteWeixinMessages(weifacheliang)
-                // delay(800)
-                // performClick(998, 1469)
-                // return
+                LicensePlateManager.markAsCompleted(weifacheliang)
+                LogManager.success("✅ 车牌 $weifacheliang 已完成")
                 continue
                 }
         
@@ -558,12 +489,25 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(540,1298)
             delay(1000)
             
-            // 18. 删除微信消息并添加车牌到结果
-            deleteWeixinMessages(weifacheliang)
-            // performClick(998, 1469)
+            // 标记为已完成
+            LicensePlateManager.markAsCompleted(weifacheliang)
+            LogManager.success("✅ 车牌 $weifacheliang 已完成")
         }
         
         Log.d(TAG, "自动化流程完成")
+        
+        // 显示统计信息
+        val stats = LicensePlateManager.getStatistics()
+        LogManager.success("🎉 批量处理完成！总数:${stats["total"]} 已完成:${stats["completed"]} 失败:${stats["failed"]}")
+        
+        // 显示失败车牌详情
+        val failedPlates = LicensePlateManager.getFailedPlates()
+        if (failedPlates.isNotEmpty()) {
+            LogManager.warning("⚠️ 失败车牌清单：")
+            failedPlates.forEach { plate ->
+                // LogManager.warning("  ${plate.plateNumber}: ${plate.failureReason ?: \"未知原因\" }")
+            }
+        }
     }
     
     private suspend fun handleErrorDialogs() {
@@ -662,10 +606,9 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(800)
             performClick(308, 1298) // 是
             delay(800)
-            deleteWeixinMessages(weifacheliang)
-            // performClick(998, 1469)
+            LicensePlateManager.markAsCompleted(weifacheliang)
+            LogManager.success("✅ 车牌 $weifacheliang 已完成")
             return
-            // continue
         }
         
         // 处理"教育纠正"情况
@@ -690,11 +633,9 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             // clickText("确定")
             performClick(540,1298)
             delay(800)
-            deleteWeixinMessages(weifacheliang)
-            // delay(800)
-            // performClick(998, 1469)
+            LicensePlateManager.markAsCompleted(weifacheliang)
+            LogManager.success("✅ 车牌 $weifacheliang 已完成")
             return
-            // continue
         }
         
         // 处理"首违警告"情况
@@ -711,56 +652,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         
     }
     
-    private suspend fun deleteWeixinMessages(weifacheliang: String? = null) {
-        LogManager.info("清理微信消息${if (weifacheliang != null) "：$weifacheliang" else ""}")
-        val weworkPackage = getWeworkPackage()
-        launchApp(weworkPackage)
-        delay(500)
-        performLongClick(330, 1950, 800)
-        delay(800)
-        // performClick(540, 1371) // 多选
-        // delay(200)
-        // performClick(488, 1722)
-        // delay(200)
-        // performClick(945, 2145)
-        // delay(600)
-        performClick(540, 1530)
-        delay(800)
-        performClick(834, 1251)
-        delay(500)
-
-        // performClick(998, 1469)
-        
-        weifacheliang?.let {
-            AutomationDataManager.addResult(it)
-            LogManager.success("已完成处理：$it")
-        }
-    }
-    
     // ============= 辅助方法 =============
-    
-    private suspend fun launchApp(packageName: String) {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        intent?.let {
-            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(it)
-        }
-        // 等待应用启动完成（检查当前应用包名）
-        var retryCount = 0
-        while (retryCount < 20) {
-            delay(200)
-            val root = rootInActiveWindow
-            if (root?.packageName?.toString() == packageName) {
-                Log.d(TAG, "应用 $packageName 已启动")
-                delay(500) // 额外等待UI稳定
-                break
-            }
-            retryCount++
-        }
-        if (retryCount >= 20) {
-            LogManager.warning("启动应用 $packageName 超时")
-        }
-    }
     
     private suspend fun performClick(x: Int, y: Int) = suspendCancellableCoroutine<Unit> { continuation ->
         // 自动缩放坐标

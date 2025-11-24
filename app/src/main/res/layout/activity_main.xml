@@ -188,12 +188,49 @@
                 android:layout_marginStart="8dp" />
         </LinearLayout>
         
-        <!-- YDB专用图按钮 -->
+        <!-- 车牌管理和YDB专用图按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="8dp">
+
+            <!-- 车牌管理按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlateManager"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="车牌管理"
+                android:textSize="15sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#e67e22"
+                app:cornerRadius="8dp"
+                android:layout_marginEnd="8dp" />
+
+            <!-- YDB专用图按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveImage"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="YDB专用图"
+                android:textSize="15sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#f39c12"
+                app:cornerRadius="8dp"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+        
+        <!-- 占位按钮（隐藏） -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSaveImage"
+            android:id="@+id/btnSaveImagePlaceholder"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:text="YDB专用图"
+            android:text=""
+            android:visibility="gone"
             android:textSize="15sp"
             android:textColor="#FFFFFF"
             android:backgroundTint="#f39c12"

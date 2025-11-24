@@ -23,6 +23,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ListView
+import android.widget.TextView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import android.widget.Toast
@@ -91,6 +92,9 @@ class MainActivity : AppCompatActivity() {
         
         // 初始化LogManager
         LogManager.init(applicationContext)
+        
+        // 初始化LicensePlateManager
+        LicensePlateManager.init(applicationContext)
         
         // 注册广播接收器
         val filter = IntentFilter(YunDuanBanAccessibilityService.ACTION_TASK_STATUS_CHANGED)
@@ -375,6 +379,11 @@ class MainActivity : AppCompatActivity() {
         binding.btnSaveImage.setOnClickListener {
             saveImageToGallery()
         }
+        
+        // 车牌管理按钮
+        binding.btnPlateManager.setOnClickListener {
+            showPlateManagerDialog()
+        }
     }
     
     private fun showLogDialog() {
@@ -637,5 +646,183 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
             LogManager.error("保存图片失败: ${e.message}")
         }
+    }
+    
+    // ============= 车牌管理功能 =============
+    
+    private fun showPlateManagerDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_plate_manager, null)
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        
+        val tvTotal = dialogView.findViewById<android.widget.TextView>(R.id.tvTotal)
+        val tvPending = dialogView.findViewById<android.widget.TextView>(R.id.tvPending)
+        val tvCompleted = dialogView.findViewById<android.widget.TextView>(R.id.tvCompleted)
+        val tvFailed = dialogView.findViewById<android.widget.TextView>(R.id.tvFailed)
+        val tabLayout = dialogView.findViewById<com.google.android.material.tabs.TabLayout>(R.id.tabLayout)
+        val lvPlates = dialogView.findViewById<android.widget.ListView>(R.id.lvPlates)
+        val btnImportPlates = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnImportPlates)
+        val btnClearCompleted = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClearCompleted)
+        val btnExportFailed = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnExportFailed)
+        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
+        
+        fun updateStats() {
+            val stats = LicensePlateManager.getStatistics()
+            tvTotal.text = "总数: ${stats["total"]}"
+            tvPending.text = "待处理: ${stats["pending"]}"
+            tvCompleted.text = "已完成: ${stats["completed"]}"
+            tvFailed.text = "失败: ${stats["failed"]}"
+        }
+        
+        fun updateList(tabPosition: Int) {
+            val plates = when (tabPosition) {
+                1 -> LicensePlateManager.getPendingPlates()
+                2 -> LicensePlateManager.getCompletedPlates()
+                3 -> LicensePlateManager.getFailedPlates()
+                else -> LicensePlateManager.getAllPlates()
+            }
+            
+            // 使用自定义Adapter显示状态和失败原因
+            val customAdapter = object : android.widget.ArrayAdapter<LicensePlate>(this, android.R.layout.simple_list_item_2, plates) {
+                override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                    val view = convertView ?: layoutInflater.inflate(android.R.layout.simple_list_item_2, parent, false)
+                    val item = getItem(position)
+                    
+                    val text1 = view.findViewById<android.widget.TextView>(android.R.id.text1)
+                    val text2 = view.findViewById<android.widget.TextView>(android.R.id.text2)
+                    
+                    text1.text = item?.plateNumber
+                    text2.text = when (item?.status) {
+                        PlateStatus.PENDING -> "⏳ 待处理"
+                        PlateStatus.COMPLETED -> "✅ 已完成"
+                        PlateStatus.FAILED -> {
+                            val reason = if (!item.failureReason.isNullOrBlank()) {
+                                item.failureReason
+                            } else {
+                                "未知错误"
+                            }
+                            "❌ 失败: $reason"
+                        }
+                        else -> ""
+                    }
+                    
+                    text2.setTextColor(when (item?.status) {
+                        PlateStatus.PENDING -> getColor(android.R.color.holo_orange_dark)
+                        PlateStatus.COMPLETED -> getColor(android.R.color.holo_green_dark)
+                        PlateStatus.FAILED -> getColor(android.R.color.holo_red_dark)
+                        else -> getColor(android.R.color.darker_gray)
+                    })
+                    
+                    return view
+                }
+            }
+            
+            lvPlates.adapter = customAdapter
+            updateStats()
+        }
+        
+        // 初始显示全部
+        updateList(0)
+        
+        // 标签切换
+        tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
+                updateList(tab?.position ?: 0)
+            }
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+        })
+        
+        // 导入车牌按钮
+        btnImportPlates.setOnClickListener {
+            showImportPlatesDialog { 
+                updateList(tabLayout.selectedTabPosition)
+            }
+        }
+        
+        // 清空已完成按钮
+        btnClearCompleted.setOnClickListener {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("确认清空")
+                .setMessage("确定要清空所有已完成的车牌吗？")
+                .setPositiveButton("确定") { _, _ ->
+                    LicensePlateManager.clearCompleted()
+                    updateList(tabLayout.selectedTabPosition)
+                    Toast.makeText(this, "已清空已完成车牌", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        }
+        
+        // 导出失败车牌按钮
+        btnExportFailed.setOnClickListener {
+            val failedPlates = LicensePlateManager.getFailedPlates()
+            if (failedPlates.isEmpty()) {
+                Toast.makeText(this, "没有失败的车牌", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            val text = failedPlates.joinToString("\n") { 
+                "${it.plateNumber} - ${it.failureReason ?: \"未知错误\"}"
+            }
+            
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newPlainText("失败车牌", text)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "已复制${failedPlates.size}个失败车牌到剪贴板", Toast.LENGTH_SHORT).show()
+        }
+        
+        // 长按删除单个车牌
+        lvPlates.setOnItemLongClickListener { _, _, position, _ ->
+            val adapter = lvPlates.adapter as android.widget.ArrayAdapter<*>
+            val plate = adapter.getItem(position) as? LicensePlate
+            
+            plate?.let {
+                android.app.AlertDialog.Builder(this)
+                    .setTitle("删除车牌")
+                    .setMessage("确定要删除车牌 ${it.plateNumber} 吗？")
+                    .setPositiveButton("删除") { _, _ ->
+                        LicensePlateManager.deletePlate(it.plateNumber)
+                        updateList(tabLayout.selectedTabPosition)
+                        Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+            }
+            true
+        }
+        
+        // 关闭按钮
+        btnClose.setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    private fun showImportPlatesDialog(onImported: () -> Unit) {
+        val input = android.widget.EditText(this)
+        input.hint = "每行一个车牌号"
+        input.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+        input.minLines = 10
+        input.maxLines = 20
+        input.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        
+        android.app.AlertDialog.Builder(this)
+            .setTitle("批量导入车牌")
+            .setMessage("请输入车牌号，每行一个：")
+            .setView(input)
+            .setPositiveButton("导入") { _, _ ->
+                val text = input.text.toString()
+                if (text.isNotBlank()) {
+                    val count = LicensePlateManager.importPlates(text)
+                    Toast.makeText(this, "成功导入 $count 个车牌", Toast.LENGTH_SHORT).show()
+                    LogManager.info("批量导入 $count 个车牌")
+                    onImported()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 }
