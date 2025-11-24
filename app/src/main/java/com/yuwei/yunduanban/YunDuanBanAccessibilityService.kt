@@ -957,13 +957,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             }
             
             // 自动缩放OCR区域坐标和尺寸
-            // val scaled = CoordinateScaler.scaleRect(x, y, w, h)
-            // val (scaledX, scaledY, scaledW, scaledH) = scaled
+            val scaled = CoordinateScaler.scaleRect(x, y, w, h)
+            val (scaledX, scaledY, scaledW, scaledH) = scaled
             
-            // val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
-            // Log.d(TAG, "OCR识别 原始($x,$y,$w,$h) 缩放后($scaledX,$scaledY,$scaledW,$scaledH) -> '$result'")
-            val result = ocrManager?.performOCR(x, y, w, h)
-            Log.d(TAG, "OCR识别 ($x,$y,$w,$h) -> '$result'")
+            val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
+            Log.d(TAG, "OCR识别 原始($x,$y,$w,$h) 缩放后($scaledX,$scaledY,$scaledW,$scaledH) -> '$result'")
+            // val result = ocrManager?.performOCR(x, y, w, h)
+            // Log.d(TAG, "OCR识别 ($x,$y,$w,$h) -> '$result'")
             result
         } catch (e: Exception) {
             Log.e(TAG, "OCR识别异常 ($x,$y,$w,$h)", e)
