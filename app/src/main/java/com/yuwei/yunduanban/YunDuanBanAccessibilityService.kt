@@ -239,7 +239,25 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         val weworkPackage = getWeworkPackage()
         LogManager.info("正在打开政务微信... (包名: $weworkPackage)")
         launchApp(weworkPackage)
-        delay(1000)  // 增加等待时间，确保应用完全打开
+        delay(1500)  // 增加等待时间，确保应用完全打开和界面加载完成
+        
+        // 验证界面是否就绪（通过检查rootInActiveWindow）
+        var interfaceReady = false
+        for (retry in 1..5) {
+            val root = rootInActiveWindow
+            if (root != null && root.packageName?.toString() == weworkPackage) {
+                LogManager.info("✅ 政务微信界面已就绪")
+                interfaceReady = true
+                break
+            }
+            LogManager.warning("等待政务微信界面就绪... (尝试 $retry/5)")
+            delay(500)
+        }
+        
+        if (!interfaceReady) {
+            LogManager.error("政务微信界面未就绪，无法继续执行")
+            return@withContext
+        }
         
         LogManager.info("开始主循环，最多处理150条记录")
         
@@ -261,11 +279,30 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             LogManager.info("处理第 ${i + 1} 条记录...")
             
-            // 检查是否有违法车辆信息
+            // 检查是否有违法车辆信息（添加重试机制）
             LogManager.info("正在识别违法车辆信息...")
-            val weifacheliang = performOCR(150, 1888, 333, 116)
-            LogManager.info("OCR识别结果: '$weifacheliang'")
+            var weifacheliang: String? = null
+            var ocrRetryCount = 0
+            val maxOcrRetries = 3
             
+            while (ocrRetryCount < maxOcrRetries) {
+                weifacheliang = performOCR(150, 1888, 333, 116)
+                
+                if (weifacheliang != null) {
+                    LogManager.info("OCR识别成功: '$weifacheliang'")
+                    break
+                } else {
+                    ocrRetryCount++
+                    if (ocrRetryCount < maxOcrRetries) {
+                        LogManager.warning("OCR识别返回null，重试 ($ocrRetryCount/$maxOcrRetries)...")
+                        delay(500)  // 等待界面稳定
+                    } else {
+                        LogManager.error("OCR识别失败，已重试${maxOcrRetries}次")
+                    }
+                }
+            }
+            
+            // 检查OCR结果
             if (weifacheliang.isNullOrEmpty() || weifacheliang.contains("开始")) {
                 Log.d(TAG, "未检测到违法车辆信息（结果: $weifacheliang），结束循环")
                 LogManager.warning("未检测到违法车辆信息（结果: '$weifacheliang'），结束循环")
@@ -956,18 +993,29 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 return null
             }
             
+            // 检查当前界面是否可访问
+            val root = rootInActiveWindow
+            if (root == null) {
+                Log.w(TAG, "rootInActiveWindow为null，界面可能未就绪")
+                LogManager.warning("界面未就绪，跳过OCR识别")
+                return null
+            }
+            
             // 自动缩放OCR区域坐标和尺寸
             val scaled = CoordinateScaler.scaleRect(x, y, w, h)
             val (scaledX, scaledY, scaledW, scaledH) = scaled
             
             val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
             Log.d(TAG, "OCR识别 原始($x,$y,$w,$h) 缩放后($scaledX,$scaledY,$scaledW,$scaledH) -> '$result'")
-            // val result = ocrManager?.performOCR(x, y, w, h)
-            // Log.d(TAG, "OCR识别 ($x,$y,$w,$h) -> '$result'")
+            
+            if (result == null) {
+                Log.w(TAG, "OCR返回null，可能是截屏失败或识别区域无文字")
+            }
+            
             result
         } catch (e: Exception) {
-            Log.e(TAG, "OCR识别异常 ($x,$y,$w,$h)", e)
-            LogManager.error("OCR识别失败: ${e.message}")
+            Log.e(TAG, "OCR识别异常 ($x,$y,$w,$h): ${e::class.simpleName} - ${e.message}", e)
+            LogManager.error("OCR识别失败: ${e::class.simpleName} - ${e.message}")
             null
         }
     }
