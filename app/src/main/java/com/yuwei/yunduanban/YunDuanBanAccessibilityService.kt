@@ -505,7 +505,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         if (failedPlates.isNotEmpty()) {
             LogManager.warning("⚠️ 失败车牌清单：")
             failedPlates.forEach { plate ->
-                // LogManager.warning("  ${plate.plateNumber}: ${plate.failureReason ?: \"未知原因\" }")
+                LogManager.warning("  ${plate.plateNumber}: ${plate.failureReason ?: "未知原因" }")
             }
         }
     }

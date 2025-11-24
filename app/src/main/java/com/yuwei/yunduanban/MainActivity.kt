@@ -764,7 +764,7 @@ class MainActivity : AppCompatActivity() {
             }
             
             val text = failedPlates.joinToString("\n") { 
-                "${it.plateNumber} - ${it.failureReason ?: \"未知错误\"}"
+                "${it.plateNumber} - ${it.failureReason ?: "未知错误"}"
             }
             
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
