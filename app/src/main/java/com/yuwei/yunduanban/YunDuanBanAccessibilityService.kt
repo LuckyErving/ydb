@@ -334,7 +334,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 performClick(540, 1298)
                 delay(400)
                 deleteWeixinMessages()
-                performClick(998, 1469)
+                // performClick(998, 1469)
                 continue
             }
             LogManager.info("查询到车辆数据，开始处理")
@@ -399,7 +399,102 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(2000)
             
             // 15. 处理各种特殊情况
-            handleSpecialCases(weifacheliang)
+            // handleSpecialCases(weifacheliang)
+            // 处理"请稍后"循环
+            while (findTextNode("请稍后") != null) {
+                LogManager.warning("等待系统响应...")
+                performClick(550, 1300)
+                delay(300)
+            
+            while (findTextNode("已取消业务数据校验") != null) {
+                LogManager.info("取消业务数据校验")
+                performClick(290, 1300) // 是
+                delay(800)
+                performClick(540, 2152)
+                delay(2000)
+            }
+            }
+
+            while (findTextNode("已取消业务数据校验") != null) {
+                LogManager.info("取消业务数据校验")
+                performClick(290, 1300) // 是
+                delay(800)
+                performClick(540, 2152)
+                delay(2000)
+            }
+
+            // 处理"骑手性质"选择
+            if (findTextNode("请选择骑手性质") != null) {
+                LogManager.info("选择骑手性质：众包")
+                performClick(540, 1298)
+                delay(600)
+                performClick(810, 1860)
+                delay(600)
+                clickText("众包")
+                delay(800)
+                performClick(540, 2158)
+                delay(600)
+            }
+
+
+            // 处理"继续开单"情况
+            if (findTextNode("继续开单") != null) {
+                LogManager.info("检测到'继续开单'提示，按流程处理")
+                performClick(773, 1545) // 否
+                delay(800)
+                performClick(773, 1400) // 否
+                delay(600)
+                performBack()
+                delay(800)
+                performClick(308, 1298) // 是
+                delay(800)
+                deleteWeixinMessages(weifacheliang)
+                // performClick(998, 1469)
+                // return
+                continue
+            }
+        
+            // 处理"教育纠正"情况
+            if (findTextNode("该违法符合教育纠正条件") != null) {
+                LogManager.info("检测到'教育纠正'条件")
+                if (findTextNode("民警当日开具的简易程序已达") != null) {
+                    LogManager.warning("已达到开单上限")
+                    // return
+                    break
+                }
+                performClick(773, 1478) // 否
+                delay(700)
+                performClick(540, 2158) // 打印
+                
+                val dangchangchufayulann = performOCR(324, 128, 502, 73)
+                if (dangchangchufayulann != "当场处罚打印预览") {
+                    LogManager.error("教育纠正打印预览界面异常")
+                    // return
+                    break
+                }
+                delay(800)
+                performClick(308, 1298) // 是
+                delay(1000)
+                // clickText("确定")
+                performClick(540,1298)
+                delay(800)
+                deleteWeixinMessages(weifacheliang)
+                // delay(800)
+                // performClick(998, 1469)
+                // return
+                continue
+                }
+        
+            // 处理"首违警告"情况
+            if (findTextNode("违法符合首违警告情形") != null) {
+                LogManager.info("检测到'首违警告'情形，选择警告处理")
+                performClick(773, 1370)
+                delay(600)
+                clickText("警告")
+                delay(900)
+                performClick(540, 2152) // 打印预览
+                delay(2000)
+            }
             
             // 16. 检查是否达到上限
             if (findTextNode("民警当日开具的简易程序已达") != null) {
@@ -428,7 +523,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             // 18. 删除微信消息并添加车牌到结果
             deleteWeixinMessages(weifacheliang)
-            performClick(998, 1469)
+            // performClick(998, 1469)
         }
         
         Log.d(TAG, "自动化流程完成")
@@ -531,7 +626,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(308, 1298) // 是
             delay(800)
             deleteWeixinMessages(weifacheliang)
-            performClick(998, 1469)
+            // performClick(998, 1469)
             return
             // continue
         }
@@ -559,7 +654,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(540,1298)
             delay(800)
             deleteWeixinMessages(weifacheliang)
-            performClick(998, 1469)
+            // delay(800)
+            // performClick(998, 1469)
             return
             // continue
         }
@@ -861,11 +957,13 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             }
             
             // 自动缩放OCR区域坐标和尺寸
-            val scaled = CoordinateScaler.scaleRect(x, y, w, h)
-            val (scaledX, scaledY, scaledW, scaledH) = scaled
+            // val scaled = CoordinateScaler.scaleRect(x, y, w, h)
+            // val (scaledX, scaledY, scaledW, scaledH) = scaled
             
-            val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
-            Log.d(TAG, "OCR识别 原始($x,$y,$w,$h) 缩放后($scaledX,$scaledY,$scaledW,$scaledH) -> '$result'")
+            // val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
+            // Log.d(TAG, "OCR识别 原始($x,$y,$w,$h) 缩放后($scaledX,$scaledY,$scaledW,$scaledH) -> '$result'")
+            val result = ocrManager?.performOCR(x, y, w, h)
+            Log.d(TAG, "OCR识别 ($x,$y,$w,$h) -> '$result'")
             result
         } catch (e: Exception) {
             Log.e(TAG, "OCR识别异常 ($x,$y,$w,$h)", e)

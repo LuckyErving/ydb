@@ -11,8 +11,8 @@ android {
         applicationId "com.yuwei.yunduanban"
         minSdk 29  // Android 10
         targetSdk 34
-        versionCode 18
-        versionName "2.5.8"
+        versionCode 19
+        versionName "2.6.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
