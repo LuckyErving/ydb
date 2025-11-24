@@ -334,6 +334,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
                 performClick(540, 1298)
                 delay(400)
                 deleteWeixinMessages()
+                performClick(998, 1469)
                 continue
             }
             LogManager.info("查询到车辆数据，开始处理")
@@ -427,6 +428,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             
             // 18. 删除微信消息并添加车牌到结果
             deleteWeixinMessages(weifacheliang)
+            performClick(998, 1469)
         }
         
         Log.d(TAG, "自动化流程完成")
@@ -529,6 +531,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(308, 1298) // 是
             delay(800)
             deleteWeixinMessages(weifacheliang)
+            performClick(998, 1469)
             return
             // continue
         }
@@ -556,6 +559,7 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             performClick(540,1298)
             delay(800)
             deleteWeixinMessages(weifacheliang)
+            performClick(998, 1469)
             return
             // continue
         }
@@ -591,7 +595,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         delay(800)
         performClick(834, 1251)
         delay(500)
-        performClick(998, 1469)
+
+        // performClick(998, 1469)
         
         weifacheliang?.let {
             AutomationDataManager.addResult(it)
