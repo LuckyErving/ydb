@@ -285,15 +285,16 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             }
             LogManager.info("已进入云端办界面")
             
-            // 6. 粘贴号牌搜索
+            // 6. 输入号牌搜索
             performClick(740, 355)
             delay(200)
-            performClick(890, 348)
-            delay(600)
-            performLongClick(740, 355, 800)
-            delay(900)
-            performClick(261, 238)
-            delay(300)
+            // performClick(890, 348)
+            // delay(600)
+            // performLongClick(740, 355, 800)
+            // delay(900)
+            // performClick(261, 238)
+            inputText(weifacheliang)
+            delay(400)
             performClick(995, 352) // 点击搜索
             delay(3000)
             
