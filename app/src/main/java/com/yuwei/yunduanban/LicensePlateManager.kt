@@ -177,6 +177,14 @@ object LicensePlateManager {
     }
     
     /**
+     * 清空失败的车牌
+     */
+    fun clearFailed() {
+        plates.removeAll { it.status == PlateStatus.FAILED }
+        savePlates()
+    }
+    
+    /**
      * 获取统计信息
      */
     fun getStatistics(): Map<String, Int> {

@@ -665,6 +665,7 @@ class MainActivity : AppCompatActivity() {
         val btnImportPlates = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnImportPlates)
         val btnClearCompleted = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClearCompleted)
         val btnExportFailed = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnExportFailed)
+        val btnClearFailed = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClearFailed)
         val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
         
         fun updateStats() {
@@ -763,14 +764,32 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             
-            val text = failedPlates.joinToString("\n") { 
-                "${it.plateNumber} - ${it.failureReason ?: "未知错误"}"
-            }
+            val text = failedPlates.joinToString("\n") { it.plateNumber }
             
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip = android.content.ClipData.newPlainText("失败车牌", text)
             clipboard.setPrimaryClip(clip)
             Toast.makeText(this, "已复制${failedPlates.size}个失败车牌到剪贴板", Toast.LENGTH_SHORT).show()
+        }
+        
+        // 清空失败车牌按钮
+        btnClearFailed.setOnClickListener {
+            val failedCount = LicensePlateManager.getStatistics()["failed"] ?: 0
+            if (failedCount == 0) {
+                Toast.makeText(this, "没有失败的车牌", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            android.app.AlertDialog.Builder(this)
+                .setTitle("清空失败车牌")
+                .setMessage("确定要清空 $failedCount 个失败车牌吗？")
+                .setPositiveButton("确定") { _, _ ->
+                    LicensePlateManager.clearFailed()
+                    updateList(tabLayout.selectedTabPosition)
+                    Toast.makeText(this, "已清空失败车牌", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("取消", null)
+                .show()
         }
         
         // 长按删除单个车牌

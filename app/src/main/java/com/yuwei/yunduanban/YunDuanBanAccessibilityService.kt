@@ -288,8 +288,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             // 6. 输入号牌搜索
             performClick(740, 355)
             delay(200)
-            // performClick(890, 348)
-            // delay(600)
+            performClick(890, 348)
+            delay(600)
             // performLongClick(740, 355, 800)
             // delay(900)
             // performClick(261, 238)

@@ -106,40 +106,63 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingTop="16dp"
-        android:gravity="center">
+        android:orientation="vertical"
+        android:paddingTop="16dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnImportPlates"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:text="导入"
-            android:textSize="14sp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            android:orientation="horizontal"
+            android:gravity="center">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClearCompleted"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:text="清空已完成"
-            android:textSize="14sp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnImportPlates"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="导入"
+                android:textSize="14sp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnExportFailed"
-            android:layout_width="0dp"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnClearCompleted"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="清空已完成"
+                android:textSize="14sp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:text="导出失败"
-            android:textSize="14sp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="center">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnExportFailed"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="导出失败"
+                android:textSize="14sp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnClearFailed"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="清空失败"
+                android:textSize="14sp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+        </LinearLayout>
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
