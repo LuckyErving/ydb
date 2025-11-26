@@ -273,10 +273,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             delay(800)
             
             performClick(540, 1170)
-            delay(600)
+            delay(800)
             
             // 检查是否在云端办界面
             val yunduanban = performOCR(450, 128, 165, 75)
+            delay(300)
             if (yunduanban != "云端办") {
                 Log.d(TAG, "未在云端办界面")
                 LogManager.error("未在云端办界面，标记失败")
@@ -898,7 +899,8 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             val scaled = CoordinateScaler.scaleRect(x, y, w, h)
             val (scaledX, scaledY, scaledW, scaledH) = scaled
             
-            val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
+            // val result = ocrManager?.performOCR(scaledX, scaledY, scaledW, scaledH)
+            val result = ocrManager?.performOCR(x, y, w, h)
             Log.d(TAG, "OCR识别 原始($x,$y,$w,$h) 缩放后($scaledX,$scaledY,$scaledW,$scaledH) -> '$result'")
             
             if (result == null) {
