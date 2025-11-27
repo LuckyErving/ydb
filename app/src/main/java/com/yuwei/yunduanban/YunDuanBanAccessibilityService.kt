@@ -240,6 +240,11 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
         // 请求截屏权限（需要MediaProjection API）
         delay(1000)
         
+        openRecentApps()
+        delay(300)           
+        performClick(540, 1170)
+        delay(800)
+
         // 主循环，根据待处理车牌数量决定次数
         for (i in 0 until totalCount) {
             // 检查协程是否被取消
@@ -269,15 +274,14 @@ class YunDuanBanAccessibilityService : AccessibilityService() {
             LogManager.info("📋 当前车牌: $weifacheliang")
             
             // 切换到云端办
-            openRecentApps()
-            delay(800)
-            
-            performClick(540, 1170)
-            delay(800)
+            // openRecentApps()
+            // delay(300)           
+            // performClick(540, 1170)
+            // delay(800)
             
             // 检查是否在云端办界面
             val yunduanban = performOCR(450, 128, 165, 75)
-            delay(300)
+            delay(800)
             if (yunduanban != "云端办") {
                 Log.d(TAG, "未在云端办界面")
                 LogManager.error("未在云端办界面，标记失败")
